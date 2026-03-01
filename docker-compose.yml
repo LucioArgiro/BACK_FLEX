@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  # 1. Tu Base de Datos (Ahora con MySQL)
+  mysql-db:
+    image: mysql:8.0
+    container_name: flex_studio_mysql
+    restart: always
+    ports:
+      - '3307:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: FlexDB
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  # 2. Tu "Nube" local para los videos de las clases
+  minio:
+    image: minio/minio
+    container_name: vod_minio
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin_minio
+      MINIO_ROOT_PASSWORD: supersecretminio
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  mysql_data:
+  minio_data:
