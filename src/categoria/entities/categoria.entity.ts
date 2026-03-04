@@ -13,7 +13,7 @@ export class Categoria {
   @Column({ type: 'text', nullable: true })
   descripcion: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 }) // Mejor que Float para dinero
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   precio: number;
 
   @Column({ nullable: true })

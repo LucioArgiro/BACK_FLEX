@@ -7,6 +7,7 @@ import { CategoriaModule } from './categoria/categoria.module';
 import { VideoModule } from './video/video.module';
 import { CompraModule } from './compra/compra.module';
 import { AuthModule } from './auth/auth.module';
+import { MinioModule } from './minio/minio.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AuthModule } from './auth/auth.module';
     VideoModule,
     CompraModule,
     AuthModule,
+    MinioModule,
   ],
   controllers: [AppController],
   providers: [AppService],
