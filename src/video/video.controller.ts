@@ -1,34 +1,51 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, Patch, Delete, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { VideoService } from './video.service';
-import { CreateVideoDto } from './dto/create-video.dto';
-import { UpdateVideoDto } from './dto/update-video.dto';
+import { JwtStrategy } from 'src/auth/jwt.strategy';
+import { AdminGuard } from 'src/auth/admin.guard';
 
-@Controller('video')
+@Controller('videos')
 export class VideoController {
   constructor(private readonly videoService: VideoService) {}
 
+
   @Post()
-  create(@Body() createVideoDto: CreateVideoDto) {
-    return this.videoService.create(createVideoDto);
+  @UseInterceptors(FileInterceptor('video'))
+  @UseGuards(JwtStrategy, AdminGuard)
+  crear(
+    @Body() body: any, 
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    return this.videoService.crearConVideo(body, file);
   }
 
   @Get()
-  findAll() {
-    return this.videoService.findAll();
+  obtenerTodos() {
+    return this.videoService.obtenerTodos();
   }
 
+
+  @Get('categoria/:idCategoria')
+  obtenerPorCategoria(@Param('idCategoria') idCategoria: string) {
+    return this.videoService.obtenerPorCategoria(idCategoria);
+  }
+
+
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.videoService.findOne(+id);
+  obtenerPorId(@Param('id') id: string) {
+    return this.videoService.obtenerPorId(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateVideoDto: UpdateVideoDto) {
-    return this.videoService.update(+id, updateVideoDto);
+  @UseGuards(JwtStrategy, AdminGuard)
+  actualizar(@Param('id') id: string, @Body() body: any) {
+    return this.videoService.actualizar(id, body);
   }
 
+
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.videoService.remove(+id);
+  @UseGuards(JwtStrategy, AdminGuard)
+  eliminar(@Param('id') id: string) {
+    return this.videoService.eliminar(id);
   }
 }

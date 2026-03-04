@@ -1,26 +1,52 @@
-import { Injectable } from '@nestjs/common';
-import { CreateCategoriaDto } from './dto/create-categoria.dto';
-import { UpdateCategoriaDto } from './dto/update-categoria.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Categoria } from './entities/categoria.entity';
 
 @Injectable()
 export class CategoriaService {
-  create(createCategoriaDto: CreateCategoriaDto) {
-    return 'This action adds a new categoria';
+  constructor(
+    @InjectRepository(Categoria)
+    private readonly categoriaRepository: Repository<Categoria>,
+  ) {}
+
+  async crear(datos: any) {
+    const nuevaCategoria = this.categoriaRepository.create({
+      titulo: datos.titulo,
+      descripcion: datos.descripcion,
+      precio: datos.precio,
+      urlVideoMuestra: datos.urlVideoMuestra,
+    });
+    return await this.categoriaRepository.save(nuevaCategoria);
   }
 
-  findAll() {
-    return `This action returns all categoria`;
+  async obtenerTodas() {
+    return await this.categoriaRepository.find({
+      relations: ['videos'],
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} categoria`;
+async obtenerPorId(id: string) {
+    const categoria = await this.categoriaRepository.findOne({
+      where: { id },
+      relations: ['videos'],
+    });
+    
+    if (!categoria) {
+      throw new NotFoundException(`La categoría con ID ${id} no existe`);
+    }
+    return categoria;
   }
 
-  update(id: number, updateCategoriaDto: UpdateCategoriaDto) {
-    return `This action updates a #${id} categoria`;
+  async actualizar(id: string, datos: any) {
+    const categoria=await this.obtenerPorId(id);
+    this.categoriaRepository.merge(categoria, datos);
+    return await this.categoriaRepository.save(categoria);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} categoria`;
+  async eliminar(id: string) {
+    const categoria = await this.obtenerPorId(id);
+    return await this.categoriaRepository.remove(categoria);
+    return { mensaje: `Categoría con ID ${id} eliminada` };
   }
 }

@@ -1,34 +1,38 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards } from '@nestjs/common';
 import { CategoriaService } from './categoria.service';
-import { CreateCategoriaDto } from './dto/create-categoria.dto';
-import { UpdateCategoriaDto } from './dto/update-categoria.dto';
+import { JwtStrategy } from 'src/auth/jwt.strategy';
+import { AdminGuard } from 'src/auth/admin.guard';
 
-@Controller('categoria')
+@Controller('categorias')
 export class CategoriaController {
   constructor(private readonly categoriaService: CategoriaService) {}
 
+
   @Post()
-  create(@Body() createCategoriaDto: CreateCategoriaDto) {
-    return this.categoriaService.create(createCategoriaDto);
+  @UseGuards(JwtStrategy, AdminGuard) 
+  crear(@Body() body: any) {
+    return this.categoriaService.crear(body);
   }
 
   @Get()
-  findAll() {
-    return this.categoriaService.findAll();
+  obtenerTodas() {
+    return this.categoriaService.obtenerTodas();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.categoriaService.findOne(+id);
+  obtenerPorId(@Param('id') id: string) {
+    return this.categoriaService.obtenerPorId(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCategoriaDto: UpdateCategoriaDto) {
-    return this.categoriaService.update(+id, updateCategoriaDto);
+  @UseGuards(JwtStrategy, AdminGuard)
+  actualizar(@Param('id') id: string, @Body() body: any) {
+    return this.categoriaService.actualizar(id, body);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.categoriaService.remove(+id);
+  @UseGuards(JwtStrategy, AdminGuard)
+  eliminar(@Param('id') id: string) {
+    return this.categoriaService.eliminar(id);
   }
 }
