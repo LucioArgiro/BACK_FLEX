@@ -5,15 +5,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Usuario } from '../usuario/entities/usuario.entity';
 import { JwtModule } from '@nestjs/jwt'; 
 import { JwtStrategy } from './jwt.strategy';
+import { ConfigModule, ConfigService } from '@nestjs/config'; // 👈 Imports
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Usuario]),
-    
-    // 2. Registramos el módulo de JWT y le damos la configuración básica
-    JwtModule.register({
-      secret: 'SUPER_SECRETO_FLEX', // (Más adelante moveremos esto a un archivo .env)
-      signOptions: { expiresIn: '1d' }, // El token será válido por 1 día
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'), 
+        signOptions: { expiresIn: '1d' },
+      }),
     }),
   ],
   controllers: [AuthController],

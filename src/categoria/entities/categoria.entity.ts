@@ -19,10 +19,12 @@ export class Categoria {
   @Column({ nullable: true })
   urlVideoMuestra: string;
 
+  @Column({ nullable: true })
+  imagenUrl: string;
+
   @CreateDateColumn()
   fechaCreacion: Date;
 
-  // Relaciones
   @OneToMany(() => Video, (video) => video.categoria)
   videos: Video[];
 
