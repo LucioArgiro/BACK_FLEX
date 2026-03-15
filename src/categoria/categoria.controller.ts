@@ -15,8 +15,8 @@ export class CategoriaController {
   @UseGuards(JwtStrategy, AdminGuard)
   @UseInterceptors(FileInterceptor('imagen'))
   crear(
-    @Body() body: CreateCategoriaDto, 
-    @UploadedFile() file: Express.Multer.File 
+    @Body() body: CreateCategoriaDto,
+    @UploadedFile() file: Express.Multer.File
   ) {
     return this.categoriaService.crear(body, file);
   }
@@ -33,8 +33,9 @@ export class CategoriaController {
 
   @Patch(':id')
   @UseGuards(JwtStrategy, AdminGuard)
-  actualizar(@Param('id') id: string, @Body() body: any) {
-    return this.categoriaService.actualizar(id, body);
+  @UseInterceptors(FileInterceptor('imagen')) 
+  actualizar(@Param('id') id: string, @Body() body: any, @UploadedFile() file?: Express.Multer.File ) {
+    return this.categoriaService.actualizar(id, body, file);
   }
 
   @Delete(':id')
