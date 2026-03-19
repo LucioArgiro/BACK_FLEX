@@ -10,6 +10,9 @@ export class Categoria {
   @Column()
   titulo: string;
 
+  @Column({type: 'varchar', length: 255, nullable:true})
+  descripcionCard:string;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   descripcionBreve: string;
 

@@ -31,6 +31,7 @@ export class CategoriaService {
   async crear(datos: CreateCategoriaDto, files?: ArchivosCategoria) {
     const nuevaCategoria = this.categoriaRepository.create({
       titulo: datos.titulo,
+      descripcionCard:datos.descripcionCard,
       descripcionBreve: datos.descripcionBreve,
       descripcionDetallada: datos.descripcionDetallada,
       precio: datos.precio,

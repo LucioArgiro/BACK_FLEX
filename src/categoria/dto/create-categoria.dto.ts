@@ -8,6 +8,10 @@ export class CreateCategoriaDto {
 
   @IsString()
   @IsOptional()
+  descripcionCard?: string;
+
+  @IsString()
+  @IsOptional()
   descripcionBreve?: string;
 
   @IsString()
