@@ -8,7 +8,6 @@ import { CategoriaModule } from './categoria/categoria.module';
 import { VideoModule } from './video/video.module';
 import { CompraModule } from './compra/compra.module';
 import { AuthModule } from './auth/auth.module';
-import { MinioModule } from './minio/minio.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
@@ -36,7 +35,6 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     VideoModule,
     CompraModule,
     AuthModule,
-    MinioModule,
     CloudinaryModule,
   ],
   controllers: [AppController],

@@ -1,7 +1,6 @@
 import { Controller, Post, Body, Param, Get, Patch, Delete, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { VideoService } from './video.service';
-import { JwtStrategy } from 'src/auth/jwt.strategy';
 import { AdminGuard } from 'src/auth/admin.guard';
 
 @Controller('videos')
@@ -11,7 +10,7 @@ export class VideoController {
 
   @Post()
   @UseInterceptors(FileInterceptor('video'))
-  @UseGuards(JwtStrategy, AdminGuard)
+  @UseGuards(AdminGuard)
   crear(
     @Body() body: any, 
     @UploadedFile() file: Express.Multer.File
@@ -37,14 +36,14 @@ export class VideoController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtStrategy, AdminGuard)
+  @UseGuards(AdminGuard)
   actualizar(@Param('id') id: string, @Body() body: any) {
     return this.videoService.actualizar(id, body);
   }
 
 
   @Delete(':id')
-  @UseGuards(JwtStrategy, AdminGuard)
+  @UseGuards(AdminGuard)
   eliminar(@Param('id') id: string) {
     return this.videoService.eliminar(id);
   }
