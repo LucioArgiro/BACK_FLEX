@@ -6,21 +6,33 @@ import { Compra } from '../../compra/entities/compra.entity';
 export class Categoria {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
+  
   @Column()
   titulo: string;
 
+  @Column({type: 'varchar', length: 255, nullable:true})
+  descripcionCard:string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  descripcionBreve: string;
+
   @Column({ type: 'text', nullable: true })
-  descripcion: string;
+  descripcionDetallada: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   precio: number;
 
   @Column({ nullable: true })
-  urlVideoMuestra: string;
+  playbackIdMuestra: string;
 
   @Column({ nullable: true })
-  imagenUrl: string;
+  imagenHero: string;
+
+  @Column({ nullable: true })
+  imagenTarjeta: string;
+
+  @Column({ type: 'simple-json', nullable: true })
+  beneficios: { titulo: string; descripcion: string; icono?: string }[];
 
   @CreateDateColumn()
   fechaCreacion: Date;

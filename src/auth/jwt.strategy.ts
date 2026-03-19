@@ -6,7 +6,6 @@ import { ConfigService } from '@nestjs/config'; // 👈 Import
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  // 👈 Inyectamos ConfigService aquí
   constructor(private configService: ConfigService) { 
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([

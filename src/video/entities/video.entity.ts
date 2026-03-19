@@ -9,8 +9,17 @@ export class Video {
   @Column()
   titulo: string;
 
+  // 👇 ID de Mux para tareas de administración (como eliminar el video)
   @Column()
-  idCloudflare: string;
+  assetId: string; 
+
+  // 👇 ID de Mux exclusivo para el reproductor del Frontend
+  @Column()
+  playbackId: string;
+
+  // 👇 URL de Cloudinary para la portada del video (opcional al inicio)
+  @Column({ nullable: true })
+  imagenUrl: string;
 
   @Column({ type: 'int' })
   orden: number;

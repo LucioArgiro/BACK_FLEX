@@ -25,8 +25,7 @@ export class AuthController {
     });
     return {
       mensaje: 'Login exitoso',
-      usuario,
-      token
+      usuario
     };
   }
 
