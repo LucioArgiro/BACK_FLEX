@@ -8,7 +8,7 @@ import { UpdateCategoriaDto } from './dto/update-categoria.dto';
 interface ArchivosCategoria {
   imagenHero?: Express.Multer.File[];
   imagenTarjeta?: Express.Multer.File[];
-  videoMuestra?: Express.Multer.File[]; // 👈 Añadimos el video a la interfaz
+  videoMuestra?: Express.Multer.File[];  
 }
 
 @Controller('categorias')
@@ -20,7 +20,7 @@ export class CategoriaController {
   @UseInterceptors(FileFieldsInterceptor([
     { name: 'imagenHero', maxCount: 1 },
     { name: 'imagenTarjeta', maxCount: 1 },
-    { name: 'videoMuestra', maxCount: 1 }, // 👈 Abrimos la puerta para el video
+    { name: 'videoMuestra', maxCount: 1 },  
   ]))
   crear(
     @Body() body: CreateCategoriaDto,
