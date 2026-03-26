@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Video, EstadoVideo } from './entities/video.entity';
 import { VideoGateway } from './video.gateway';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { Categoria } from '../categoria/entities/categoria.entity';
 import Mux from '@mux/mux-node';
 
 @Injectable()
@@ -13,6 +14,8 @@ export class VideoService {
   constructor(
     @InjectRepository(Video)
     private videoRepository: Repository<Video>,
+    @InjectRepository(Categoria)
+    private categoriaRepository: Repository<Categoria>,
     private readonly videoGateway: VideoGateway,
     private readonly cloudinaryService: CloudinaryService,
   ) {
@@ -57,38 +60,48 @@ export class VideoService {
     }
   }
 
-  // 2. MUX AVISA QUE EL VIDEO ESTÁ LISTO (WEBHOOK)
   async procesarWebhookMux(evento: any) {
     const tipo = evento.type;
+    const asset = evento?.data;
+    const passthrough = asset?.passthrough;
+    if (!passthrough) return { mensaje: 'Ignorado: No tiene passthrough' };
+    if (passthrough.startsWith('categoria_')) {
+      const categoriaId = passthrough.replace('categoria_', '');
+      if (tipo === 'video.asset.ready') {
+        await this.categoriaRepository.update(categoriaId, {
+          playbackIdMuestra: asset.playback_ids[0].id,
+          assetIdMuestra: asset.id,
+        });
+        console.log(`✅ [Webhook] Video de muestra para Categoría [${categoriaId}] procesado y LISTO`);
+      }
+      else if (tipo === 'video.asset.errored') {
+        console.error(`❌ [Webhook] Mux falló al procesar el video de muestra de la Categoría [${categoriaId}]`);
+      }
+      return { mensaje: 'Webhook de categoría procesado' };
+    }
     if (tipo === 'video.asset.ready') {
-      const asset = evento.data;
-      const videoId = asset.passthrough;
-
-      if (!videoId) return { mensaje: 'Ignorado: No tiene passthrough' };
-
-      // Buscamos el video y lo actualizamos
-      const video = await this.videoRepository.findOne({ where: { id: videoId } });
+      const video = await this.videoRepository.findOne({ where: { id: passthrough } });
       if (video) {
         video.assetId = asset.id;
         video.playbackId = asset.playback_ids[0].id;
         video.estado = EstadoVideo.LISTO;
         await this.videoRepository.save(video);
-
-        console.log(`✅ Video [${video.titulo}] procesado y LISTO`);
         this.videoGateway.notificarVideoActualizado(video);
+        console.log(`✅ [Webhook] Video [${video.titulo}] procesado y LISTO`);
       }
     }
 
     if (tipo === 'video.asset.errored') {
-      const asset = evento.data;
-      const videoId = asset.passthrough;
-      if (videoId) {
-        await this.videoRepository.update(videoId, { estado: EstadoVideo.ERROR });
-        this.videoGateway.notificarVideoActualizado(videoId);
+      const video = await this.videoRepository.findOne({ where: { id: passthrough } });
+      if (video) {
+        video.estado = EstadoVideo.ERROR;
+        await this.videoRepository.save(video);
+        this.videoGateway.notificarVideoActualizado(video);
+        console.error(`❌ [Webhook] Error en Mux al procesar el video [${video.titulo}]`);
       }
     }
 
-    return { recibido: true };
+    return { mensaje: 'Webhook de video procesado' };
   }
 
   async obtenerTodos() {
@@ -116,12 +129,23 @@ export class VideoService {
     if (video.assetId) {
       try {
         await this.muxClient.video.assets.delete(video.assetId);
-        console.log(`🗑️ Video destruido en los servidores de Mux (Asset: ${video.assetId})`);
+        console.log(`🗑️ Video destruido en Mux (Asset: ${video.assetId})`);
       } catch (error: any) {
-        console.error(`⚠️ Aviso: No se pudo borrar de Mux (Quizás ya no existía):`, error.message);
+        console.error(`⚠️ Aviso: No se pudo borrar de Mux:`, error.message);
+      }
+    }
+    if (video.imagenUrl) {
+      const publicId = this.cloudinaryService.extraerPublicId(video.imagenUrl);
+      if (publicId) {
+        try {
+          await this.cloudinaryService.deleteFile(publicId);
+          console.log(`🖼️ Imagen miniatura destruida en Cloudinary: ${publicId}`);
+        } catch (error) {
+          console.error(`⚠️ Aviso: No se pudo borrar la imagen de Cloudinary:`, error);
+        }
       }
     }
     await this.videoRepository.remove(video);
-    return { mensaje: 'Video eliminado con éxito de Flex Studio y Mux' };
+    return { mensaje: 'Video e imagen eliminados con éxito' };
   }
 }
