@@ -12,7 +12,7 @@ export class AdminGuard extends AuthGuard('jwt') {
       throw err || new UnauthorizedException('Debes iniciar sesión primero');
     }
     if (user.rol !== 'ADMIN') {
-      throw new UnauthorizedException('No tienes permisos para ver la bóveda secreta');
+      throw new UnauthorizedException('No tienes permisos de administrador');
     }
     
     return user;
