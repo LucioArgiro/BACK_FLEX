@@ -80,7 +80,9 @@ export class CategoriaService {
     }
     return categoria;
   }
-  async actualizar(id: string, datos: UpdateCategoriaDto, files?: ArchivosCategoria) {
+
+
+  async actualizar(id: string, datos: any, files?: ArchivosCategoria) {
     const categoria = await this.obtenerPorId(id);
     if (files?.imagenHero && files.imagenHero.length > 0) {
       if (categoria.imagenHero) {
@@ -98,7 +100,8 @@ export class CategoriaService {
       const uploadResult = await this.cloudinaryService.uploadFile(files.imagenTarjeta[0], 'flex-studio/categorias');
       categoria.imagenTarjeta = uploadResult.secure_url;
     }
-    if (files?.videoMuestra && files.videoMuestra.length > 0) {
+    let uploadUrlMux: string | undefined=undefined;
+    if (datos.necesitaVideoMuestra === 'true') {
       if (categoria.assetIdMuestra) {
         try {
           await this.muxClient.video.assets.delete(categoria.assetIdMuestra);
@@ -107,12 +110,27 @@ export class CategoriaService {
           console.error(`⚠️ Aviso: No se pudo borrar el video anterior de Mux`, error);
         }
       }
-      const { playbackId, assetId } = await this.subirVideoAMux(files.videoMuestra[0]);
-      datos.playbackIdMuestra = playbackId;
-      categoria.assetIdMuestra = assetId;
+      
+      categoria.assetIdMuestra = null;
+      categoria.playbackIdMuestra = null;
+      console.log(`[Categoria] Solicitando URL de actualización a Mux para la categoría ${categoria.id}`);
+      const upload = await this.muxClient.video.uploads.create({
+        new_asset_settings: {
+          playback_policy: ['public'],
+          passthrough: `categoria_${categoria.id}`,
+        },
+        cors_origin: '*',
+      });
+      uploadUrlMux = upload.url;
     }
-    this.categoriaRepository.merge(categoria, datos);
-    return await this.categoriaRepository.save(categoria);
+    const { necesitaVideoMuestra, ...datosActualizar } = datos;
+    this.categoriaRepository.merge(categoria, datosActualizar);
+    const categoriaGuardada = await this.categoriaRepository.save(categoria);
+
+    return {
+      categoria: categoriaGuardada,
+      uploadUrl: uploadUrlMux
+    };
   }
 
   async eliminar(id: string) {
