@@ -37,4 +37,7 @@ export class CreateCategoriaDto {
   })
   @IsArray({ message: 'Los beneficios deben ser un arreglo de objetos' })
   beneficios?: { titulo: string; descripcion: string; icono?: string }[];
+  @IsOptional()
+  @IsString()
+  necesitaVideoMuestra?: string; 
 }

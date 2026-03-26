@@ -6,12 +6,12 @@ import { Compra } from '../../compra/entities/compra.entity';
 export class Categoria {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-  
+
   @Column()
   titulo: string;
 
-  @Column({type: 'varchar', length: 255, nullable:true})
-  descripcionCard:string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  descripcionCard: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   descripcionBreve: string;
@@ -21,6 +21,9 @@ export class Categoria {
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   precio: number;
+
+  @Column({ nullable: true })
+  assetIdMuestra: string;
 
   @Column({ nullable: true })
   playbackIdMuestra: string;

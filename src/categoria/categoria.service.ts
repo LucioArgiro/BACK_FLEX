@@ -10,7 +10,7 @@ import Mux from '@mux/mux-node';
 interface ArchivosCategoria {
   imagenHero?: Express.Multer.File[];
   imagenTarjeta?: Express.Multer.File[];
-  videoMuestra?: Express.Multer.File[]; 
+  videoMuestra?: Express.Multer.File[];
 }
 
 @Injectable()
@@ -21,48 +21,55 @@ export class CategoriaService {
     @InjectRepository(Categoria)
     private readonly categoriaRepository: Repository<Categoria>,
     private readonly cloudinaryService: CloudinaryService,
-  ) { 
+  ) {
     this.muxClient = new Mux({
       tokenId: process.env.MUX_TOKEN_ID,
       tokenSecret: process.env.MUX_TOKEN_SECRET,
     });
   }
 
-  async crear(datos: CreateCategoriaDto, files?: ArchivosCategoria) {
+  async crear(datos: any, files?: ArchivosCategoria) {
     const nuevaCategoria = this.categoriaRepository.create({
       titulo: datos.titulo,
-      descripcionCard:datos.descripcionCard,
+      descripcionCard: datos.descripcionCard,
       descripcionBreve: datos.descripcionBreve,
       descripcionDetallada: datos.descripcionDetallada,
       precio: datos.precio,
-      playbackIdMuestra: datos.playbackIdMuestra,
       beneficios: datos.beneficios,
     });
-
     if (files?.imagenHero && files.imagenHero.length > 0) {
-      const uploadResult = await this.cloudinaryService.uploadFile(files.imagenHero[0]);
+      const uploadResult = await this.cloudinaryService.uploadFile(files.imagenHero[0], 'flex-studio/categorias');
       nuevaCategoria.imagenHero = uploadResult.secure_url;
     }
-
     if (files?.imagenTarjeta && files.imagenTarjeta.length > 0) {
-      const uploadResult = await this.cloudinaryService.uploadFile(files.imagenTarjeta[0]);
+      const uploadResult = await this.cloudinaryService.uploadFile(files.imagenTarjeta[0], 'flex-studio/categorias');
       nuevaCategoria.imagenTarjeta = uploadResult.secure_url;
     }
-
-    if (files?.videoMuestra && files.videoMuestra.length > 0) {
-      const playbackId = await this.subirVideoAMux(files.videoMuestra[0]);
-      nuevaCategoria.playbackIdMuestra = playbackId; 
+    const categoriaGuardada = await this.categoriaRepository.save(nuevaCategoria);
+    let uploadUrlMux: string | undefined = undefined;;
+    if (datos.necesitaVideoMuestra === 'true') {
+      console.log(`[Categoria] Solicitando URL de subida a Mux para la categoría ${categoriaGuardada.id}`);
+      const upload = await this.muxClient.video.uploads.create({
+        new_asset_settings: {
+          playback_policy: ['public'],
+          passthrough: `categoria_${categoriaGuardada.id}`, // 👈 El Webhook leerá esto
+        },
+        cors_origin: '*',
+      });
+      uploadUrlMux = upload.url;
     }
-
-    return await this.categoriaRepository.save(nuevaCategoria);
+    return {
+      categoria: categoriaGuardada,
+      uploadUrl: uploadUrlMux
+    };
   }
+
 
   async obtenerTodas() {
     return await this.categoriaRepository.find({
       relations: ['videos'],
     });
   }
-
   async obtenerPorId(id: string) {
     const categoria = await this.categoriaRepository.findOne({
       where: { id },
@@ -73,7 +80,6 @@ export class CategoriaService {
     }
     return categoria;
   }
-
   async actualizar(id: string, datos: UpdateCategoriaDto, files?: ArchivosCategoria) {
     const categoria = await this.obtenerPorId(id);
     if (files?.imagenHero && files.imagenHero.length > 0) {
@@ -81,7 +87,7 @@ export class CategoriaService {
         const publicId = this.extraerPublicId(categoria.imagenHero);
         if (publicId) await this.cloudinaryService.deleteFile(publicId);
       }
-      const uploadResult = await this.cloudinaryService.uploadFile(files.imagenHero[0]);
+      const uploadResult = await this.cloudinaryService.uploadFile(files.imagenHero[0], 'flex-studio/categorias');
       categoria.imagenHero = uploadResult.secure_url;
     }
     if (files?.imagenTarjeta && files.imagenTarjeta.length > 0) {
@@ -89,14 +95,22 @@ export class CategoriaService {
         const publicId = this.extraerPublicId(categoria.imagenTarjeta);
         if (publicId) await this.cloudinaryService.deleteFile(publicId);
       }
-      const uploadResult = await this.cloudinaryService.uploadFile(files.imagenTarjeta[0]);
+      const uploadResult = await this.cloudinaryService.uploadFile(files.imagenTarjeta[0], 'flex-studio/categorias');
       categoria.imagenTarjeta = uploadResult.secure_url;
     }
     if (files?.videoMuestra && files.videoMuestra.length > 0) {
-      const playbackId = await this.subirVideoAMux(files.videoMuestra[0]);
-      datos.playbackIdMuestra = playbackId; 
+      if (categoria.assetIdMuestra) {
+        try {
+          await this.muxClient.video.assets.delete(categoria.assetIdMuestra);
+          console.log(`🗑️ Video de muestra anterior destruido en Mux`);
+        } catch (error) {
+          console.error(`⚠️ Aviso: No se pudo borrar el video anterior de Mux`, error);
+        }
+      }
+      const { playbackId, assetId } = await this.subirVideoAMux(files.videoMuestra[0]);
+      datos.playbackIdMuestra = playbackId;
+      categoria.assetIdMuestra = assetId;
     }
-
     this.categoriaRepository.merge(categoria, datos);
     return await this.categoriaRepository.save(categoria);
   }
@@ -110,6 +124,14 @@ export class CategoriaService {
     if (categoria.imagenTarjeta) {
       const publicId = this.extraerPublicId(categoria.imagenTarjeta);
       if (publicId) await this.cloudinaryService.deleteFile(publicId);
+    }
+    if (categoria.assetIdMuestra) {
+      try {
+        await this.muxClient.video.assets.delete(categoria.assetIdMuestra);
+        console.log(`🗑️ Video de muestra destruido en Mux`);
+      } catch (error) {
+        console.error(`⚠️ Aviso: No se pudo borrar el video de muestra de Mux`, error);
+      }
     }
     await this.categoriaRepository.remove(categoria);
     return { mensaje: `Categoría con ID ${id} eliminada` };
@@ -126,7 +148,7 @@ export class CategoriaService {
     return null;
   }
 
-  private async subirVideoAMux(archivo: Express.Multer.File): Promise<string> {
+  private async subirVideoAMux(archivo: Express.Multer.File): Promise<{ playbackId: string, assetId: string }> {
     try {
       console.log(`[Categoria] Iniciando subida a Mux del archivo: ${archivo.originalname}`);
       const upload = await this.muxClient.video.uploads.create({
@@ -137,39 +159,30 @@ export class CategoriaService {
         cors_origin: '*',
       });
       const fileBlob = new Blob([new Uint8Array(archivo.buffer)], { type: archivo.mimetype });
-
       await fetch(upload.url, {
         method: 'PUT',
         body: fileBlob,
         headers: { 'Content-Type': archivo.mimetype },
       });
-
-      console.log('[Categoria] Archivo recibido por Mux. Esperando a que genere el ID...');
       let assetId: string | null = null;
       let intentos = 0;
       while (!assetId && intentos < 15) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         const uploadStatus = await this.muxClient.video.uploads.retrieve(upload.id);
-
         if (uploadStatus.asset_id) {
           assetId = uploadStatus.asset_id;
         }
         intentos++;
       }
-
       if (!assetId) {
         throw new Error('Mux tardó demasiado en procesar.');
       }
-      
       const asset = await this.muxClient.video.assets.retrieve(assetId);
       const playbackId = asset.playback_ids?.[0]?.id;
-      
       if (!playbackId) {
         throw new Error('El video se procesó pero no generó un ID de reproducción.');
       }
-
-      console.log(`[Categoria] ¡Subida exitosa a Mux! Playback ID: ${playbackId}`);
-      return playbackId;
+      return { playbackId, assetId };
 
     } catch (err) {
       console.error('[Categoria] Error procesando el archivo con Mux:', err);

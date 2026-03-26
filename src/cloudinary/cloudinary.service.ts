@@ -25,4 +25,19 @@ export class CloudinaryService {
       });
     });
   }
+
+  extraerPublicId(url: string): string | null {
+    try {
+      const partes = url.split('/upload/');
+      if (partes.length < 2) return null;
+      let ruta = partes[1];
+      if (ruta.startsWith('v') && ruta.includes('/')) {
+        ruta = ruta.substring(ruta.indexOf('/') + 1);
+      }
+      const publicId = ruta.substring(0, ruta.lastIndexOf('.'));
+      return publicId || ruta;
+    } catch (error) {
+      return null;
+    }
+  }
 }
