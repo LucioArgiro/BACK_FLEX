@@ -25,6 +25,7 @@ export class Video {
   
   @Column({ nullable: true })
   imagenUrl: string;
+  
   @Column({ type: 'int' })
   orden: number;
   @Column({ type: 'int', nullable: true })

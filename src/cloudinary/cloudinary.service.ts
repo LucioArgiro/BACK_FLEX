@@ -4,10 +4,10 @@ import * as streamifier from 'streamifier';
 
 @Injectable()
 export class CloudinaryService {
-  uploadFile(file: Express.Multer.File): Promise<any> {
+  uploadFile(file: Express.Multer.File, folderName: string = 'flex-studio/categorias'): Promise<any> {
     return new Promise<any>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: 'flex-studio/categorias' },
+        { folder: folderName },  
         (error, result) => {
           if (error) return reject(error);
           resolve(result);
