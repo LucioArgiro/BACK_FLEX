@@ -22,11 +22,11 @@ export class Categoria {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   precio: number;
 
-  @Column({ nullable: true })
-  assetIdMuestra: string;
+  @Column({ type: 'varchar', nullable: true })  
+  assetIdMuestra: string | null;
 
-  @Column({ nullable: true })
-  playbackIdMuestra: string;
+  @Column({ type: 'varchar', nullable: true })  
+  playbackIdMuestra: string | null;
 
   @Column({ nullable: true })
   imagenHero: string;
