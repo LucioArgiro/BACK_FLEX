@@ -1,16 +1,22 @@
-import { Controller, Post, Body, Param, Get, Patch, Delete, UseGuards, Headers } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, Patch, Delete, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { VideoService } from './video.service';
 import { AdminGuard } from 'src/auth/admin.guard';
 
 @Controller('videos')
 export class VideoController {
-  constructor(private readonly videoService: VideoService) {}
+  constructor(private readonly videoService: VideoService) { }
 
-  // 1. Endpoint para pedir la URL (Protegido por tu Guard)
   @Post('solicitar-subida')
   @UseGuards(AdminGuard)
-  solicitarSubida(@Body() body: any) {
-    return this.videoService.solicitarUrlSubida(body);
+  @UseInterceptors(FileInterceptor('imagen')) // 👈 Agregamos el interceptor
+  solicitarSubida(
+    @Body() body: any,
+    @UploadedFile() file: Express.Multer.File // 👈 Atrapamos la imagen
+  ) {
+    // Aquí adentro le pasas el body y el file a tu videoService, 
+    // lo subes a Cloudinary/S3, guardas la URL en la BD y devuelves el link de Mux.
+    return this.videoService.solicitarUrlSubida(body, file);
   }
 
   // 2. Endpoint para el Webhook de Mux (Público, no lleva Guard porque Mux no tiene tu token)
