@@ -9,17 +9,15 @@ export class VideoController {
 
   @Post('solicitar-subida')
   @UseGuards(AdminGuard)
-  @UseInterceptors(FileInterceptor('imagen')) // 👈 Agregamos el interceptor
+  @UseInterceptors(FileInterceptor('imagen'))
   solicitarSubida(
     @Body() body: any,
-    @UploadedFile() file: Express.Multer.File // 👈 Atrapamos la imagen
+    @UploadedFile() file: Express.Multer.File
   ) {
-    // Aquí adentro le pasas el body y el file a tu videoService, 
-    // lo subes a Cloudinary/S3, guardas la URL en la BD y devuelves el link de Mux.
+
     return this.videoService.solicitarUrlSubida(body, file);
   }
 
-  // 2. Endpoint para el Webhook de Mux (Público, no lleva Guard porque Mux no tiene tu token)
   @Post('webhook')
   manejarWebhook(@Body() body: any) {
     return this.videoService.procesarWebhookMux(body);
@@ -42,8 +40,13 @@ export class VideoController {
 
   @Patch(':id')
   @UseGuards(AdminGuard)
-  actualizar(@Param('id') id: string, @Body() body: any) {
-    return this.videoService.actualizar(id, body);
+  @UseInterceptors(FileInterceptor('imagen')) // 👈 1. Agregamos el interceptor
+  actualizar(
+    @Param('id') id: string,
+    @Body() body: any,
+    @UploadedFile() file: Express.Multer.File // 👈 2. Atrapamos el archivo
+  ) {
+    return this.videoService.actualizar(id, body, file); // 👈 3. Se lo pasamos al servicio
   }
 
   @Delete(':id')

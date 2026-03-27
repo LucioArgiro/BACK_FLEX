@@ -118,9 +118,27 @@ export class VideoService {
     return video;
   }
 
-  async actualizar(id: string, datos: any) {
+async actualizar(id: string, datos: any, archivoMiniatura?: Express.Multer.File) {
     const video = await this.obtenerPorId(id);
-    this.videoRepository.merge(video, datos);
+    if (archivoMiniatura) {
+      if (video.imagenUrl) {
+        const publicId = this.cloudinaryService.extraerPublicId(video.imagenUrl);
+        if (publicId) {
+          try {
+            await this.cloudinaryService.deleteFile(publicId);
+            console.log(`Miniatura anterior destruida en Cloudinary: ${publicId}`);
+          } catch (error) {
+            console.error('Aviso: No se pudo borrar la miniatura vieja', error);
+          }
+        }
+      }
+      const uploadResult = await this.cloudinaryService.uploadFile(archivoMiniatura, 'flex-studio/videos');
+      video.imagenUrl = uploadResult.secure_url;
+    }
+    if (datos.titulo) video.titulo = datos.titulo;
+    if (datos.idCategoria) video.idCategoria = datos.idCategoria;
+    if (datos.duracion) video.duracion = parseInt(datos.duracion);
+    if (datos.orden) video.orden = parseInt(datos.orden);
     return await this.videoRepository.save(video);
   }
 
@@ -129,9 +147,9 @@ export class VideoService {
     if (video.assetId) {
       try {
         await this.muxClient.video.assets.delete(video.assetId);
-        console.log(`🗑️ Video destruido en Mux (Asset: ${video.assetId})`);
+        console.log(`Video borrado en Mux (Asset: ${video.assetId})`);
       } catch (error: any) {
-        console.error(`⚠️ Aviso: No se pudo borrar de Mux:`, error.message);
+        console.error(`Aviso: No se pudo borrar de Mux:`, error.message);
       }
     }
     if (video.imagenUrl) {
@@ -139,9 +157,9 @@ export class VideoService {
       if (publicId) {
         try {
           await this.cloudinaryService.deleteFile(publicId);
-          console.log(`🖼️ Imagen miniatura destruida en Cloudinary: ${publicId}`);
+          console.log(`Imagen miniatura borrada en Cloudinary: ${publicId}`);
         } catch (error) {
-          console.error(`⚠️ Aviso: No se pudo borrar la imagen de Cloudinary:`, error);
+          console.error(`Aviso: No se pudo borrar la imagen de Cloudinary:`, error);
         }
       }
     }
