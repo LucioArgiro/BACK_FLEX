@@ -13,6 +13,12 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  redis-db:
+    image: redis:alpine
+    container_name: flex_studio_redis
+    restart: always
+    ports:
+      - '6379:6379' 
 
 volumes:
   mysql_data:
