@@ -1,34 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Body, Patch, UseGuards, Req } from '@nestjs/common';
 import { UsuarioService } from './usuario.service';
-import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { type Request } from 'express';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'; 
 
-@Controller('usuario')
+@Controller('usuarios')
 export class UsuarioController {
   constructor(private readonly usuarioService: UsuarioService) {}
-
-  @Post()
-  create(@Body() createUsuarioDto: CreateUsuarioDto) {
-    return this.usuarioService.create(createUsuarioDto);
+  @UseGuards(JwtAuthGuard) 
+  @Get('me')
+  async obtenerMiPerfil(@Req() req: Request) {
+    const userId = (req.user as any).id; 
+    const usuario = await this.usuarioService.findOne(userId);
+    const { contrasena, ...datosPublicos } = usuario;
+    return datosPublicos;
   }
 
-  @Get()
-  findAll() {
-    return this.usuarioService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usuarioService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUsuarioDto: UpdateUsuarioDto) {
-    return this.usuarioService.update(+id, updateUsuarioDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usuarioService.remove(+id);
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  async actualizarMiPerfil(
+    @Req() req: Request, 
+    @Body() updateUsuarioDto: UpdateUsuarioDto
+  ) {
+    const userId = (req.user as any).id;
+    const usuarioActualizado = await this.usuarioService.update(userId, updateUsuarioDto);
+    const { contrasena, ...datosPublicos } = usuarioActualizado;
+    return datosPublicos;
   }
 }
