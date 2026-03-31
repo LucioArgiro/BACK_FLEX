@@ -52,7 +52,7 @@ export class CategoriaService {
       const upload = await this.muxClient.video.uploads.create({
         new_asset_settings: {
           playback_policy: ['public'],
-          passthrough: `categoria_${categoriaGuardada.id}`, // 👈 El Webhook leerá esto
+          passthrough: `categoria_${categoriaGuardada.id}`,
         },
         cors_origin: '*',
       });
