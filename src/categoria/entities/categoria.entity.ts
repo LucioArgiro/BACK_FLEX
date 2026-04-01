@@ -28,11 +28,11 @@ export class Categoria {
   @Column({ type: 'varchar', nullable: true })  
   playbackIdMuestra: string | null;
 
-  @Column({ nullable: true })
-  imagenHero: string;
+  @Column({ type: 'varchar', nullable: true })
+  imagenHero: string | null;
 
-  @Column({ nullable: true })
-  imagenTarjeta: string;
+  @Column({ type: 'varchar', nullable: true }) 
+  imagenTarjeta: string | null;
 
   @Column({ type: 'simple-json', nullable: true })
   beneficios: { titulo: string; descripcion: string; icono?: string }[];

@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, Min, IsArray } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, Min, IsArray, MaxLength } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export class CreateCategoriaDto {
@@ -8,11 +8,13 @@ export class CreateCategoriaDto {
 
   @IsString()
   @IsOptional()
-  descripcionCard?: string;
+  @MaxLength(255, { message: 'La descripción de la tarjeta no puede superar los 255 caracteres.' })
+  descripcionCard: string;
 
   @IsString()
   @IsOptional()
-  descripcionBreve?: string;
+  @MaxLength(255, { message: 'La descripción breve (suscripción) no puede superar los 255 caracteres.' })
+  descripcionBreve: string;
 
   @IsString()
   @IsOptional()
@@ -39,5 +41,5 @@ export class CreateCategoriaDto {
   beneficios?: { titulo: string; descripcion: string; icono?: string }[];
   @IsOptional()
   @IsString()
-  necesitaVideoMuestra?: string; 
+  necesitaVideoMuestra?: string;
 }
