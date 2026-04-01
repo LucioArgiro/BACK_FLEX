@@ -37,8 +37,8 @@ import { BullModule } from '@nestjs/bullmq';
         return {
           transport: {
             host: config.get('EMAIL_HOST'),
-            port: config.get<number>('EMAIL_PORT') || 465,
-            secure: true,
+            port: 2525, 
+            secure: false,
             auth: {
               user: config.get<string>('EMAIL_USER'),
               pass: config.get<string>('EMAIL_PASS'),

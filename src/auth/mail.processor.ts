@@ -3,6 +3,7 @@ import { Job } from 'bullmq';
 import { MailerService } from '@nestjs-modules/mailer';
 import { Logger } from '@nestjs/common';
 
+
 @Processor('email-queue')
 export class MailProcessor extends WorkerHost {
   private readonly logger = new Logger(MailProcessor.name);
