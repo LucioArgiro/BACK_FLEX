@@ -40,13 +40,13 @@ export class VideoController {
 
   @Patch(':id')
   @UseGuards(AdminGuard)
-  @UseInterceptors(FileInterceptor('imagen')) // 👈 1. Agregamos el interceptor
+  @UseInterceptors(FileInterceptor('imagen'))
   actualizar(
     @Param('id') id: string,
     @Body() body: any,
-    @UploadedFile() file: Express.Multer.File // 👈 2. Atrapamos el archivo
+    @UploadedFile() file: Express.Multer.File 
   ) {
-    return this.videoService.actualizar(id, body, file); // 👈 3. Se lo pasamos al servicio
+    return this.videoService.actualizar(id, body, file); 
   }
 
   @Delete(':id')

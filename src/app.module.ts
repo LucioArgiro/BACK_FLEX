@@ -36,8 +36,8 @@ import { BullModule } from '@nestjs/bullmq';
       useFactory: (config: ConfigService) => {
         return {
           transport: {
-            host: config.get<string>('EMAIL_HOST'),
-            port: 465,
+            host: config.get('EMAIL_HOST'),
+            port: config.get<number>('EMAIL_PORT') || 465,
             secure: true,
             auth: {
               user: config.get<string>('EMAIL_USER'),
