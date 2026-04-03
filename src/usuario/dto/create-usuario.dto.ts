@@ -1,8 +1,7 @@
-import { IsString, IsEmail, IsNotEmpty, IsOptional, MinLength, IsDateString, Matches } from 'class-validator';
+import { IsString, IsEmail, IsNotEmpty, IsOptional, IsPhoneNumber, IsDateString, Matches } from 'class-validator';
 
 
 export class CreateUsuarioDto {
-  // --- CAMPOS OBLIGATORIOS ---
 
   @IsEmail({}, { message: 'El correo debe tener un formato válido' })
   @IsNotEmpty({ message: 'El correo es obligatorio' })
@@ -25,9 +24,9 @@ export class CreateUsuarioDto {
 
   // --- CAMPOS OPCIONALES ---
 
-  @IsString()
-  @IsOptional()
-  telefono?: string;
+  @IsNotEmpty({ message: 'El teléfono es obligatorio' })
+  @IsPhoneNumber(undefined, { message: 'El formato del número telefónico es inválido internacionalmente' })
+  telefono: string;
 
   // Usamos IsDateString porque desde React enviaremos la fecha como texto (ej: "1995-08-25")
   @IsDateString({}, { message: 'La fecha debe tener un formato válido (YYYY-MM-DD)' })

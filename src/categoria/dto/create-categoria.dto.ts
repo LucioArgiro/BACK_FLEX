@@ -20,10 +20,17 @@ export class CreateCategoriaDto {
   @IsOptional()
   descripcionDetallada?: string;
 
+  @IsOptional()
   @Type(() => Number)
-  @IsNumber({}, { message: 'El precio debe ser un número' })
-  @Min(0, { message: 'El precio no puede ser negativo' })
-  precio: number;
+  @IsNumber({}, { message: 'El precio en pesos (ARS) debe ser un número' })
+  @Min(0, { message: 'El precio en pesos no puede ser negativo' })
+  precioArs?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'El precio en dólares (USD) debe ser un número' })
+  @Min(0, { message: 'El precio en dólares no puede ser negativo' })
+  precioUsd?: number;
 
   @IsString()
   @IsOptional()
@@ -39,6 +46,7 @@ export class CreateCategoriaDto {
   })
   @IsArray({ message: 'Los beneficios deben ser un arreglo de objetos' })
   beneficios?: { titulo: string; descripcion: string; icono?: string }[];
+  
   @IsOptional()
   @IsString()
   necesitaVideoMuestra?: string;
