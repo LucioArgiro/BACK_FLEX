@@ -2,8 +2,21 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, Jo
 import { Usuario } from '../../usuario/entities/usuario.entity';
 import { Categoria } from '../../categoria/entities/categoria.entity';
 
+// 👇 Definimos los estados posibles del pago
+export enum EstadoPago {
+  PENDIENTE = 'PENDIENTE',
+  APROBADO = 'APROBADO',
+  RECHAZADO = 'RECHAZADO',
+}
+
+// 👇 Definimos las pasarelas que usamos
+export enum PlataformaPago {
+  MERCADOPAGO = 'MERCADOPAGO',
+  PAYPAL = 'PAYPAL',
+}
+
 @Entity('compras')
-@Unique(['idUsuario', 'idCategoria']) // Evita que un usuario compre la misma categoría dos veces
+@Unique(['idUsuario', 'idCategoria'])
 export class Compra {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -13,14 +26,29 @@ export class Compra {
 
   @Column()
   idCategoria: string;
+  
+  @Column({ type: 'enum', enum: EstadoPago, default: EstadoPago.PENDIENTE })
+  estado: EstadoPago;
+
+  @Column({ type: 'enum', enum: PlataformaPago, nullable: true })
+  plataforma: PlataformaPago;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  montoCobrado: number;
+
+  @Column({ type: 'varchar', length: 3, nullable: true })
+  moneda: string; 
 
   @Column({ nullable: true })
-  idPago: string;
+  idPagoExterno: string;  
+
+  @Column({ nullable: true })
+  urlPago: string; 
 
   @CreateDateColumn()
   fechaCompra: Date;
 
-  // Relaciones
+ 
   @ManyToOne(() => Usuario, (usuario) => usuario.compras, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'idUsuario' })
   usuario: Usuario;

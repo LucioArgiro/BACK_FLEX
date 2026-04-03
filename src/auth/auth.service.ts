@@ -63,7 +63,8 @@ export class AuthService {
         nombre: usuario.nombre,
         apellido: usuario.apellido,
         correo: usuario.correo,
-        rol: usuario.rol
+        rol: usuario.rol,
+        pais:usuario.pais,
       }
     };
   }

@@ -34,9 +34,12 @@ export class CategoriaService {
       descripcionCard: datos.descripcionCard,
       descripcionBreve: datos.descripcionBreve,
       descripcionDetallada: datos.descripcionDetallada,
-      precio: datos.precio,
+      // 👇 REEMPLAZAMOS 'precio' POR LOS DOS PRECIOS NUEVOS
+      precioArs: datos.precioArs,
+      precioUsd: datos.precioUsd,
       beneficios: datos.beneficios,
     });
+
     if (files?.imagenHero && files.imagenHero.length > 0) {
       const uploadResult = await this.cloudinaryService.uploadFile(files.imagenHero[0], 'flex-studio/categorias');
       nuevaCategoria.imagenHero = uploadResult.secure_url;
@@ -45,8 +48,10 @@ export class CategoriaService {
       const uploadResult = await this.cloudinaryService.uploadFile(files.imagenTarjeta[0], 'flex-studio/categorias');
       nuevaCategoria.imagenTarjeta = uploadResult.secure_url;
     }
+
     const categoriaGuardada = await this.categoriaRepository.save(nuevaCategoria);
     let uploadUrlMux: string | undefined = undefined;
+
     if (datos.necesitaVideoMuestra === 'true') {
       console.log(`[Categoria] Solicitando URL de subida a Mux para la categoría ${categoriaGuardada.id}`);
       const upload = await this.muxClient.video.uploads.create({
@@ -58,18 +63,19 @@ export class CategoriaService {
       });
       uploadUrlMux = upload.url;
     }
+
     return {
       categoria: categoriaGuardada,
       uploadUrl: uploadUrlMux
     };
   }
 
-
   async obtenerTodas() {
     return await this.categoriaRepository.find({
       relations: ['videos'],
     });
   }
+
   async obtenerPorId(id: string) {
     const categoria = await this.categoriaRepository.findOne({
       where: { id },
@@ -81,9 +87,9 @@ export class CategoriaService {
     return categoria;
   }
 
-
- async actualizar(id: string, datos: any, files?: ArchivosCategoria) {
+  async actualizar(id: string, datos: any, files?: ArchivosCategoria) {
     const categoria = await this.obtenerPorId(id);
+
     if (datos.eliminarImagenHero === 'true') {
       if (categoria.imagenHero) {
         const publicId = this.extraerPublicId(categoria.imagenHero);
@@ -96,6 +102,7 @@ export class CategoriaService {
         categoria.imagenHero = null;
       }
     }
+
     if (datos.eliminarImagenTarjeta === 'true') {
       if (categoria.imagenTarjeta) {
         const publicId = this.extraerPublicId(categoria.imagenTarjeta);
@@ -117,6 +124,7 @@ export class CategoriaService {
       const uploadResult = await this.cloudinaryService.uploadFile(files.imagenHero[0], 'flex-studio/categorias');
       categoria.imagenHero = uploadResult.secure_url;
     }
+
     if (files?.imagenTarjeta && files.imagenTarjeta.length > 0) {
       if (categoria.imagenTarjeta) {
         const publicId = this.extraerPublicId(categoria.imagenTarjeta);
@@ -125,6 +133,7 @@ export class CategoriaService {
       const uploadResult = await this.cloudinaryService.uploadFile(files.imagenTarjeta[0], 'flex-studio/categorias');
       categoria.imagenTarjeta = uploadResult.secure_url;
     }
+
     let uploadUrlMux: string | undefined = undefined;
     if (datos.necesitaVideoMuestra === 'true') {
       if (categoria.assetIdMuestra) {
@@ -159,9 +168,14 @@ export class CategoriaService {
         categoria.playbackIdMuestra = null;
       }
     }
+
+    // 👇 IMPORTANTE: Al usar rest operator aquí, TypeORM asume que en 'datos' 
+    // vienen las claves 'precioArs' y 'precioUsd' desde el Front-End.
     const {necesitaVideoMuestra, eliminarImagenHero, eliminarImagenTarjeta, ...datosActualizar} = datos;
+    
     this.categoriaRepository.merge(categoria, datosActualizar);
     const categoriaGuardada = await this.categoriaRepository.save(categoria);
+    
     return {
       categoria: categoriaGuardada,
       uploadUrl: uploadUrlMux

@@ -19,8 +19,12 @@ export class Categoria {
   @Column({ type: 'text', nullable: true })
   descripcionDetallada: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  precio: number;
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  precioArs: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  precioUsd: number;
+
 
   @Column({ type: 'varchar', nullable: true })  
   assetIdMuestra: string | null;
