@@ -10,51 +10,51 @@ export enum RolUsuario {
 
 export class Usuario {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ unique: true })
-  correo: string;
+  correo!: string;
 
   @Column()
-  contrasena: string;
+  contrasena!: string;
 
   @Column()
-  nombre: string;
+  nombre!: string;
 
   @Column()
-  apellido: string;
+  apellido!: string;
 
   @Column({ nullable: true })
-  telefono: string;
+  telefono!: string;
 
   @Column({ type: 'date', nullable: true })
-  fechaNacimiento: Date;
+  fechaNacimiento!: Date;
 
   @Column({ nullable: true })
-  pais: string;
+  pais!: string;
 
   @Column({ nullable: true })
-  provincia: string;
+  provincia!: string;
 
   @Column({ nullable: true })
-  ciudad: string;
+  ciudad!: string;
 
   @Column({ nullable: true })
-  direccion: string;
+  direccion!: string;
 
   @Column({ nullable: true })
-  codigoPostal: string;
+  codigoPostal!: string;
 
   @Column({ type: 'enum', enum: RolUsuario, default: RolUsuario.CLIENTE })
-  rol: RolUsuario;
+  rol!: RolUsuario;
 
   @CreateDateColumn()
-  fechaCreacion: Date;
+  fechaCreacion!: Date;
 
   @UpdateDateColumn()
-  fechaActualizacion: Date;
+  fechaActualizacion!: Date;
 
   // Relación: Un usuario puede tener muchas compras
   @OneToMany(() => Compra, (compra) => compra.usuario)
-  compras: Compra[];
+  compras!: Compra[];
 }

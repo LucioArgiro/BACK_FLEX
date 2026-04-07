@@ -5,48 +5,48 @@ import { Compra } from '../../compra/entities/compra.entity';
 @Entity('categorias')
 export class Categoria {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  titulo: string;
+  titulo!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  descripcionCard: string;
+  descripcionCard!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  descripcionBreve: string;
+  descripcionBreve!: string;
 
   @Column({ type: 'text', nullable: true })
-  descripcionDetallada: string;
+  descripcionDetallada!: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  precioArs: number;
+  precioArs!: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  precioUsd: number;
+  precioUsd!: number;
 
 
   @Column({ type: 'varchar', nullable: true })  
-  assetIdMuestra: string | null;
+  assetIdMuestra!: string | null;
 
   @Column({ type: 'varchar', nullable: true })  
-  playbackIdMuestra: string | null;
+  playbackIdMuestra!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  imagenHero: string | null;
+  imagenHero!: string | null;
 
   @Column({ type: 'varchar', nullable: true }) 
-  imagenTarjeta: string | null;
+  imagenTarjeta!: string | null;
 
   @Column({ type: 'simple-json', nullable: true })
-  beneficios: { titulo: string; descripcion: string; icono?: string }[];
+  beneficios!: { titulo: string; descripcion: string; icono?: string }[];
 
   @CreateDateColumn()
-  fechaCreacion: Date;
+  fechaCreacion!: Date;
 
   @OneToMany(() => Video, (video) => video.categoria)
-  videos: Video[];
+  videos!: Video[];
 
   @OneToMany(() => Compra, (compra) => compra.categoria)
-  compras: Compra[];
+  compras!: Compra[];
 }
