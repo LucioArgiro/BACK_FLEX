@@ -10,29 +10,29 @@ export enum EstadoVideo {
 @Entity('videos')
 export class Video {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  titulo: string;
+  titulo!: string;
   @Column({ nullable: true })
-  assetId: string;
+  assetId!: string;
 
   @Column({ nullable: true })
-  playbackId: string;
+  playbackId!: string;
 
   @Column({ type: 'enum', enum: EstadoVideo, default: EstadoVideo.PROCESANDO })
-  estado: EstadoVideo;
+  estado!: EstadoVideo;
   
   @Column({ nullable: true })
-  imagenUrl: string;
+  imagenUrl!: string;
   
   @Column({ type: 'int' })
-  orden: number;
+  orden!: number;
   @Column({ type: 'int', nullable: true })
-  duracion: number;
+  duracion!: number;
   @Column()
-  idCategoria: string;
+  idCategoria!: string;
   @ManyToOne(() => Categoria, (categoria) => categoria.videos, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'idCategoria' })
-  categoria: Categoria;
+  categoria!: Categoria;
 }

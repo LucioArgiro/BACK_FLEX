@@ -19,41 +19,41 @@ export enum PlataformaPago {
 @Unique(['idUsuario', 'idCategoria'])
 export class Compra {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  idUsuario: string;
+  idUsuario!: string;
 
   @Column()
-  idCategoria: string;
+  idCategoria!: string;
   
   @Column({ type: 'enum', enum: EstadoPago, default: EstadoPago.PENDIENTE })
-  estado: EstadoPago;
+  estado!: EstadoPago;
 
   @Column({ type: 'enum', enum: PlataformaPago, nullable: true })
-  plataforma: PlataformaPago;
+  plataforma!: PlataformaPago;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  montoCobrado: number;
+  montoCobrado!: number;
 
   @Column({ type: 'varchar', length: 3, nullable: true })
-  moneda: string; 
+  moneda!: string; 
 
   @Column({ nullable: true })
-  idPagoExterno: string;  
+  idPagoExterno!: string;  
 
   @Column({ nullable: true })
-  urlPago: string; 
+  urlPago!: string; 
 
   @CreateDateColumn()
-  fechaCompra: Date;
+  fechaCompra!: Date;
 
  
   @ManyToOne(() => Usuario, (usuario) => usuario.compras, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'idUsuario' })
-  usuario: Usuario;
+  usuario!: Usuario;
 
   @ManyToOne(() => Categoria, (categoria) => categoria.compras, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'idCategoria' })
-  categoria: Categoria;
+  categoria!: Categoria;
 }
