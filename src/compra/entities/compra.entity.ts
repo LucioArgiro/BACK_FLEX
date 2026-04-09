@@ -45,6 +45,9 @@ export class Compra {
   @Column({ nullable: true })
   urlPago!: string; 
 
+  @Column({ nullable: true })
+  grupoPagoId!: string; 
+
   @CreateDateColumn()
   fechaCompra!: Date;
 

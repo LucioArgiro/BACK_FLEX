@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Categoria } from './entities/categoria.entity';
@@ -10,7 +10,6 @@ import Mux from '@mux/mux-node';
 interface ArchivosCategoria {
   imagenHero?: Express.Multer.File[];
   imagenTarjeta?: Express.Multer.File[];
-  videoMuestra?: Express.Multer.File[];
 }
 
 @Injectable()
@@ -28,13 +27,13 @@ export class CategoriaService {
     });
   }
 
-  async crear(datos: any, files?: ArchivosCategoria) {
+ 
+  async crear(datos: CreateCategoriaDto, files?: ArchivosCategoria) {
     const nuevaCategoria = this.categoriaRepository.create({
       titulo: datos.titulo,
       descripcionCard: datos.descripcionCard,
       descripcionBreve: datos.descripcionBreve,
       descripcionDetallada: datos.descripcionDetallada,
-      // 👇 REEMPLAZAMOS 'precio' POR LOS DOS PRECIOS NUEVOS
       precioArs: datos.precioArs,
       precioUsd: datos.precioUsd,
       beneficios: datos.beneficios,
@@ -50,8 +49,8 @@ export class CategoriaService {
     }
 
     const categoriaGuardada = await this.categoriaRepository.save(nuevaCategoria);
+     
     let uploadUrlMux: string | undefined = undefined;
-
     if (datos.necesitaVideoMuestra === 'true') {
       console.log(`[Categoria] Solicitando URL de subida a Mux para la categoría ${categoriaGuardada.id}`);
       const upload = await this.muxClient.video.uploads.create({
@@ -87,33 +86,20 @@ export class CategoriaService {
     return categoria;
   }
 
-  async actualizar(id: string, datos: any, files?: ArchivosCategoria) {
+ 
+  async actualizar(id: string, datos: UpdateCategoriaDto & { eliminarImagenHero?: string, eliminarImagenTarjeta?: string }, files?: ArchivosCategoria) {
     const categoria = await this.obtenerPorId(id);
-
-    if (datos.eliminarImagenHero === 'true') {
-      if (categoria.imagenHero) {
-        const publicId = this.extraerPublicId(categoria.imagenHero);
-        if (publicId) {
-          try {
-            await this.cloudinaryService.deleteFile(publicId);
-            console.log(`Imagen Hero eliminada de Cloudinary`);
-          } catch (e) { console.error('Error borrando imagen hero vieja', e); }
-        }
-        categoria.imagenHero = null;
-      }
+ 
+    if (datos.eliminarImagenHero === 'true' && categoria.imagenHero) {
+      const publicId = this.extraerPublicId(categoria.imagenHero);
+      if (publicId) await this.cloudinaryService.deleteFile(publicId).catch(e => console.error(e));
+      categoria.imagenHero = null;
     }
 
-    if (datos.eliminarImagenTarjeta === 'true') {
-      if (categoria.imagenTarjeta) {
-        const publicId = this.extraerPublicId(categoria.imagenTarjeta);
-        if (publicId) {
-          try {
-            await this.cloudinaryService.deleteFile(publicId);
-            console.log(`Imagen Tarjeta eliminada de Cloudinary`);
-          } catch (e) { console.error('Error borrando imagen tarjeta vieja', e); }
-        }
-        categoria.imagenTarjeta = null;
-      }
+    if (datos.eliminarImagenTarjeta === 'true' && categoria.imagenTarjeta) {
+      const publicId = this.extraerPublicId(categoria.imagenTarjeta);
+      if (publicId) await this.cloudinaryService.deleteFile(publicId).catch(e => console.error(e));
+      categoria.imagenTarjeta = null;
     }
 
     if (files?.imagenHero && files.imagenHero.length > 0) {
@@ -137,16 +123,11 @@ export class CategoriaService {
     let uploadUrlMux: string | undefined = undefined;
     if (datos.necesitaVideoMuestra === 'true') {
       if (categoria.assetIdMuestra) {
-        try {
-          await this.muxClient.video.assets.delete(categoria.assetIdMuestra);
-          console.log(`Video de muestra anterior destruido en Mux (Reemplazo)`);
-        } catch (error) {
-          console.error(`Aviso: No se pudo borrar el video anterior de Mux`, error);
-        }
+        await this.muxClient.video.assets.delete(categoria.assetIdMuestra).catch(e => console.error(e));
       }
       categoria.assetIdMuestra = null;
       categoria.playbackIdMuestra = null;
-      console.log(`[Categoria] Solicitando URL de actualización a Mux para la categoría ${categoria.id}`);
+      
       const upload = await this.muxClient.video.uploads.create({
         new_asset_settings: {
           playback_policy: ['public'],
@@ -156,21 +137,13 @@ export class CategoriaService {
       });
       uploadUrlMux = upload.url;
     } 
-    else if (datos.necesitaVideoMuestra === 'false') {
-      if (categoria.assetIdMuestra) {
-        try {
-          await this.muxClient.video.assets.delete(categoria.assetIdMuestra);
-          console.log(`Video de muestra eliminado definitivamente en Mux (Sin reemplazo)`);
-        } catch (error) {
-          console.error(`Aviso: No se pudo borrar el video de Mux`, error);
-        }
-        categoria.assetIdMuestra = null;
-        categoria.playbackIdMuestra = null;
-      }
+    else if (datos.necesitaVideoMuestra === 'false' && categoria.assetIdMuestra) {
+      await this.muxClient.video.assets.delete(categoria.assetIdMuestra).catch(e => console.error(e));
+      categoria.assetIdMuestra = null;
+      categoria.playbackIdMuestra = null;
     }
 
-    // 👇 IMPORTANTE: Al usar rest operator aquí, TypeORM asume que en 'datos' 
-    // vienen las claves 'precioArs' y 'precioUsd' desde el Front-End.
+    // Desestructuramos para limpiar los flags antes de hacer el merge
     const {necesitaVideoMuestra, eliminarImagenHero, eliminarImagenTarjeta, ...datosActualizar} = datos;
     
     this.categoriaRepository.merge(categoria, datosActualizar);
@@ -193,12 +166,7 @@ export class CategoriaService {
       if (publicId) await this.cloudinaryService.deleteFile(publicId);
     }
     if (categoria.assetIdMuestra) {
-      try {
-        await this.muxClient.video.assets.delete(categoria.assetIdMuestra);
-        console.log(`Video de muestra destruido en Mux`);
-      } catch (error) {
-        console.error(`Aviso: No se pudo borrar el video de muestra de Mux`, error);
-      }
+      await this.muxClient.video.assets.delete(categoria.assetIdMuestra).catch(e => console.error(`Aviso: No se pudo borrar de Mux`, e));
     }
     await this.categoriaRepository.remove(categoria);
     return { mensaje: `Categoría con ID ${id} eliminada` };

@@ -10,8 +10,8 @@ export interface RespuestaIntencionPago {
 
 export interface IPasarelaPago {
   crearIntencionPago(
-    compra: Compra,
-    usuario: Usuario,
-    categoria: Categoria,
+    grupoPagoId: string, 
+    usuario: Usuario, 
+    categorias: Categoria[]
   ): Promise<RespuestaIntencionPago>;
 }

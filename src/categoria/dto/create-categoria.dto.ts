@@ -4,17 +4,17 @@ import { Type, Transform } from 'class-transformer';
 export class CreateCategoriaDto {
   @IsString()
   @IsNotEmpty({ message: 'El título es obligatorio' })
-  titulo: string;
+  titulo!: string;
 
   @IsString()
   @IsOptional()
   @MaxLength(255, { message: 'La descripción de la tarjeta no puede superar los 255 caracteres.' })
-  descripcionCard: string;
+  descripcionCard!: string;
 
   @IsString()
   @IsOptional()
   @MaxLength(255, { message: 'La descripción breve (suscripción) no puede superar los 255 caracteres.' })
-  descripcionBreve: string;
+  descripcionBreve!: string;
 
   @IsString()
   @IsOptional()
