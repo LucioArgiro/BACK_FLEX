@@ -78,9 +78,8 @@ export class CompraService {
     };
   }
 
-  // --- WEBHOOK ---
 
-  async procesarWebhookMercadoPago(headers: any, body: any) {
+async procesarWebhookMercadoPago(headers: any, body: any) {
     const accion = body?.action || body?.type || body?.topic;
     const dataId = body?.data?.id || body?.id;
     if ((accion !== 'payment.created' && accion !== 'payment.updated' && accion !== 'payment') || !dataId) {
@@ -94,27 +93,30 @@ export class CompraService {
     });
 
     if (comprasDelCarrito.length === 0) return;
+    let requiereActualizacion = false;
 
     comprasDelCarrito.forEach(compra => {
+      if (compra.estado === EstadoPago.APROBADO) {
+        return; 
+      }
       if (pagoReal.status === 'approved') {
-        compra.estado = 'APROBADO' as any;
+        compra.estado = EstadoPago.APROBADO;
+        requiereActualizacion = true;
       } else if (pagoReal.status === 'rejected' || pagoReal.status === 'cancelled') {
-        compra.estado = 'RECHAZADO' as any;
+        compra.estado = EstadoPago.RECHAZADO; 
+        requiereActualizacion = true;
       }
     });
-
-    await this.compraRepository.save(comprasDelCarrito);
-    console.log(`✅ ¡ÉXITO! Orden ${idGrupoLocal} actualizada a: ${pagoReal.status?.toUpperCase()}`);
+    if (requiereActualizacion) {
+      await this.compraRepository.save(comprasDelCarrito);
+      console.log(`¡ÉXITO! Orden ${idGrupoLocal} actualizada a: ${pagoReal.status?.toUpperCase()}`);
+    }
   }
 
-  async obtenerMisClasesCompradas(idUsuario: string) {
+async obtenerMisClasesCompradas(idUsuario: string) {
     const comprasAprobadas = await this.compraRepository.find({
-      where: {
-        usuario: { id: idUsuario },
-        estado: 'APROBADO' as any,
-      },
-      relations: ['categoria'],
-    });
+      where: {usuario: { id: idUsuario }, estado: EstadoPago.APROBADO,},
+      relations: ['categoria'],});
 
     const clasesUnicas: Categoria[] = [];
     const idsVistos = new Set<string>();
@@ -131,12 +133,8 @@ export class CompraService {
 
   async obtenerDetalleClaseComprada(idUsuario: string, idCategoria: string) {
     const compra = await this.compraRepository.findOne({
-      where: {
-        usuario: { id: idUsuario },
-        categoria: { id: idCategoria },
-        estado: 'APROBADO' as any,
-      },
-      relations: ['categoria', 'categoria.videos'], // 👈 ¡Traemos los videos!
+     where: {usuario: { id: idUsuario }, estado: EstadoPago.APROBADO,},
+      relations: ['categoria', 'categoria.videos'],  
     });
 
     if (!compra) {
