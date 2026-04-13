@@ -16,7 +16,6 @@ export enum PlataformaPago {
 }
 
 @Entity('compras')
-@Unique(['idUsuario', 'idCategoria'])
 export class Compra {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
