@@ -1,12 +1,14 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, LessThan } from 'typeorm'; // 👈 Se importó LessThan
 import { Compra, EstadoPago, PlataformaPago } from '../entities/compra.entity';
 import { Usuario } from '../../usuario/entities/usuario.entity';
 import { Categoria } from '../../categoria/entities/categoria.entity';
 import { CrearCompraDto } from '../dto/crear-compra.dto';
 import { MercadoPagoService } from './mercadopago.service';
 import { PaypalService } from './paypal.service';
+import { Cron, CronExpression } from '@nestjs/schedule'; // 👈 Importaciones del Cron
+
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -22,6 +24,7 @@ export class CompraService {
     private readonly paypalService: PaypalService,
   ) { }
 
+  
   async iniciarProcesoCompra(idUsuario: string, dto: CrearCompraDto) {
     const usuario = await this.usuarioRepository.findOne({ where: { id: idUsuario } });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
@@ -37,32 +40,41 @@ export class CompraService {
       }
     });
 
-    const yaCompradas = comprasPrevias.filter(c => c.estado === 'APROBADO');
+    const yaCompradas = comprasPrevias.filter(c => c.estado === EstadoPago.APROBADO);
     if (yaCompradas.length > 0) {
       throw new BadRequestException('Ya posees una suscripción activa para una o más clases de este carrito.');
     }
 
     const grupoPagoId = crypto.randomUUID();
-    const esArgentina = usuario.pais.toLowerCase() === 'argentina' || usuario.pais.toLowerCase() === 'ar';
-    const plataformaSeleccionada = esArgentina ? PlataformaPago.MERCADOPAGO : PlataformaPago.PAYPAL;
-    let nuevasCompras: Compra[] = [];
-    for (const categoria of categorias) {
-      let compra = comprasPrevias.find(c => c.idCategoria === categoria.id && c.estado === 'PENDIENTE');
 
+    // SEMÁFORO DE PAÍS
+    const esArgentina = usuario.pais?.toLowerCase() === 'argentina' || usuario.pais?.toLowerCase() === 'ar';
+    const plataformaSeleccionada = esArgentina ? PlataformaPago.MERCADOPAGO : PlataformaPago.PAYPAL;
+
+    let nuevasCompras: Compra[] = [];
+
+    for (const categoria of categorias) {
+      let compra = comprasPrevias.find(c => c.idCategoria === categoria.id && c.estado === EstadoPago.PENDIENTE);
+
+      // 👇 CORRECCIÓN BUG CARRITO ABANDONADO: 
+      // Solo creamos la entidad si no existe
       if (!compra) {
         compra = this.compraRepository.create({
           idUsuario: usuario.id,
           idCategoria: categoria.id,
           estado: EstadoPago.PENDIENTE,
-          plataforma: plataformaSeleccionada,
-          montoCobrado: esArgentina ? categoria.precioArs : categoria.precioUsd,
-          moneda: esArgentina ? 'ARS' : 'USD',
         });
       }
+      
+      // Pero SIEMPRE actualizamos los precios y plataforma para tener el dato más fresco
+      compra.plataforma = plataformaSeleccionada;
+      compra.montoCobrado = esArgentina ? categoria.precioArs : categoria.precioUsd;
+      compra.moneda = esArgentina ? 'ARS' : 'USD';
       compra.grupoPagoId = grupoPagoId;
+      
       nuevasCompras.push(compra);
     }
-
+ 
     nuevasCompras = await this.compraRepository.save(nuevasCompras);
     const pasarela = esArgentina ? this.mercadoPagoService : this.paypalService;
     const resultadoPago = await pasarela.crearIntencionPago(grupoPagoId, usuario, categorias);
@@ -70,16 +82,16 @@ export class CompraService {
       compra.idPagoExterno = resultadoPago.idPagoExterno;
       compra.urlPago = resultadoPago.urlPago || '';
     });
-    await this.compraRepository.save(nuevasCompras);
 
+    await this.compraRepository.save(nuevasCompras);
     return {
       url: resultadoPago.urlPago,
       plataforma: plataformaSeleccionada,
+      idPagoExterno: resultadoPago.idPagoExterno, // 👈 CRÍTICO para el SDK de PayPal
     };
   }
 
-
-async procesarWebhookMercadoPago(headers: any, body: any) {
+  async procesarWebhookMercadoPago(headers: any, body: any) {
     const accion = body?.action || body?.type || body?.topic;
     const dataId = body?.data?.id || body?.id;
     if ((accion !== 'payment.created' && accion !== 'payment.updated' && accion !== 'payment') || !dataId) {
@@ -96,27 +108,80 @@ async procesarWebhookMercadoPago(headers: any, body: any) {
     let requiereActualizacion = false;
 
     comprasDelCarrito.forEach(compra => {
-      if (compra.estado === EstadoPago.APROBADO) {
-        return; 
-      }
+      if (compra.estado === EstadoPago.APROBADO) return;
+
       if (pagoReal.status === 'approved') {
         compra.estado = EstadoPago.APROBADO;
         requiereActualizacion = true;
       } else if (pagoReal.status === 'rejected' || pagoReal.status === 'cancelled') {
-        compra.estado = EstadoPago.RECHAZADO; 
+        compra.estado = EstadoPago.RECHAZADO;
         requiereActualizacion = true;
       }
     });
+
     if (requiereActualizacion) {
       await this.compraRepository.save(comprasDelCarrito);
       console.log(`¡ÉXITO! Orden ${idGrupoLocal} actualizada a: ${pagoReal.status?.toUpperCase()}`);
     }
   }
 
-async obtenerMisClasesCompradas(idUsuario: string) {
+  async procesarWebhookPayPal(body: any) {
+    const tipoEvento = body?.event_type;
+    const resource = body?.resource;
+    let idGrupoLocal = '';
+    
+    if (resource?.purchase_units && resource.purchase_units.length > 0) {
+      idGrupoLocal = resource.purchase_units[0].reference_id;
+    } else if (resource?.custom_id) {
+      idGrupoLocal = resource.custom_id;
+    }
+    
+    if (!idGrupoLocal) return;
+    
+    const comprasDelCarrito = await this.compraRepository.find({
+      where: { grupoPagoId: idGrupoLocal }
+    });
+    
+    if (comprasDelCarrito.length === 0) return;
+    let requiereActualizacion = false;
+
+    // 👇 MEJORA: Escuchar si el cliente pide un reembolso para revocarle el acceso
+    if (tipoEvento === 'PAYMENT.CAPTURE.REFUNDED' || tipoEvento === 'PAYMENT.CAPTURE.REVERSED') {
+      comprasDelCarrito.forEach(compra => {
+        compra.estado = EstadoPago.RECHAZADO; // Le quitamos el acceso
+        requiereActualizacion = true;
+      });
+      if (requiereActualizacion) {
+        await this.compraRepository.save(comprasDelCarrito);
+        console.log(`❌ [Webhook PayPal]: Orden ${idGrupoLocal} REEMBOLSADA/REVOCADA.`);
+      }
+      return;
+    }
+
+    // Si no es reembolso, validamos que sea pago exitoso
+    if (tipoEvento !== 'CHECKOUT.ORDER.APPROVED' && tipoEvento !== 'PAYMENT.CAPTURE.COMPLETED') {
+      return;
+    }
+
+    comprasDelCarrito.forEach(compra => {
+      if (compra.estado === EstadoPago.APROBADO) return;
+      compra.estado = EstadoPago.APROBADO;
+      requiereActualizacion = true;
+    });
+
+    if (requiereActualizacion) {
+      await this.compraRepository.save(comprasDelCarrito);
+      console.log(`✅ ¡ÉXITO! Orden PayPal ${idGrupoLocal} actualizada a APROBADO`);
+    }
+  }
+
+  // --- OBTENCIÓN DE CLASES ---
+
+  async obtenerMisClasesCompradas(idUsuario: string) {
     const comprasAprobadas = await this.compraRepository.find({
-      where: {usuario: { id: idUsuario }, estado: EstadoPago.APROBADO,},
-      relations: ['categoria'],});
+      where: { idUsuario, estado: EstadoPago.APROBADO },
+      relations: ['categoria'],
+    });
 
     const clasesUnicas: Categoria[] = [];
     const idsVistos = new Set<string>();
@@ -133,8 +198,12 @@ async obtenerMisClasesCompradas(idUsuario: string) {
 
   async obtenerDetalleClaseComprada(idUsuario: string, idCategoria: string) {
     const compra = await this.compraRepository.findOne({
-     where: {usuario: { id: idUsuario }, estado: EstadoPago.APROBADO,},
-      relations: ['categoria', 'categoria.videos'],  
+      where: {
+        idUsuario,
+        idCategoria,
+        estado: EstadoPago.APROBADO
+      },
+      relations: ['categoria', 'categoria.videos'],
     });
 
     if (!compra) {
@@ -143,5 +212,21 @@ async obtenerMisClasesCompradas(idUsuario: string) {
 
     return compra.categoria;
   }
-}
 
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async limpiarComprasPendientes() {
+    try {
+      const hace15Minutos = new Date(Date.now() - 15 * 60 * 1000);
+      const resultado = await this.compraRepository.delete({
+        estado: EstadoPago.PENDIENTE,
+        fechaCompra: LessThan(hace15Minutos), 
+      });
+ 
+      if (resultado.affected && resultado.affected > 0) {
+        console.log(`🧹 [Limpieza Automática]: Se eliminaron ${resultado.affected} órdenes PENDIENTES caducadas.`);
+      }
+    } catch (error) {
+      console.error('Error durante la limpieza automática de compras:', error);
+    }
+  }
+}

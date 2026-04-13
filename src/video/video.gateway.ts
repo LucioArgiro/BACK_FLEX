@@ -6,7 +6,7 @@ import { Server, Socket } from 'socket.io';
 export class VideoGateway implements OnGatewayConnection, OnGatewayDisconnect {
   
   @WebSocketServer()
-  server: Server;
+  server!: Server;
  
   handleConnection(client: Socket) {
     console.log(`🟢 Panel conectado: ${client.id}`);

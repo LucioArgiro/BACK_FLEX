@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Video, EstadoVideo } from './entities/video.entity';
@@ -60,11 +60,34 @@ export class VideoService {
     }
   }
 
-  async procesarWebhookMux(evento: any) {
+  async procesarWebhookMux(body: any, headers: any) {
+    const entorno = process.env.NODE_ENV || 'development';
+    if (entorno === 'production') {
+      const webhookSecret = process.env.MUX_WEBHOOK_SECRET;
+      if (!webhookSecret) {
+        console.error('🚨 [Webhook Mux] Falta el secreto del webhook en el .env');
+        throw new ForbiddenException('Petición denegada');
+      }
+
+      try {
+        const payload = typeof body === 'string' ? body : JSON.stringify(body);
+        this.muxClient.webhooks.verifySignature(payload, headers, webhookSecret);
+
+      } catch (error) {
+        console.error('🚨 [Webhook Mux] INTENTO DE HACKEO: Firma de Mux inválida.', error);
+        throw new ForbiddenException('Firma de seguridad inválida');
+      }
+    } else {
+      console.warn('⚠️ Webhook de Mux recibido en modo desarrollo. Saltando validación de firma...');
+    }
+    const evento = typeof body === 'string' ? JSON.parse(body) : body;
+
     const tipo = evento.type;
     const asset = evento?.data;
     const passthrough = asset?.passthrough;
+
     if (!passthrough) return { mensaje: 'Ignorado: No tiene passthrough' };
+
     if (passthrough.startsWith('categoria_')) {
       const categoriaId = passthrough.replace('categoria_', '');
       if (tipo === 'video.asset.ready') {
@@ -79,6 +102,7 @@ export class VideoService {
       }
       return { mensaje: 'Webhook de categoría procesado' };
     }
+
     if (tipo === 'video.asset.ready') {
       const video = await this.videoRepository.findOne({ where: { id: passthrough } });
       if (video) {
@@ -118,7 +142,7 @@ export class VideoService {
     return video;
   }
 
-async actualizar(id: string, datos: any, archivoMiniatura?: Express.Multer.File) {
+  async actualizar(id: string, datos: any, archivoMiniatura?: Express.Multer.File) {
     const video = await this.obtenerPorId(id);
     if (archivoMiniatura) {
       if (video.imagenUrl) {

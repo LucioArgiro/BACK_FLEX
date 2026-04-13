@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Param, Get, Patch, Delete, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, Patch, Delete, UseGuards, UseInterceptors, UploadedFile, Headers } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { VideoService } from './video.service';
 import { AdminGuard } from 'src/auth/admin.guard';
@@ -19,21 +19,24 @@ export class VideoController {
   }
 
   @Post('webhook')
-  manejarWebhook(@Body() body: any) {
-    return this.videoService.procesarWebhookMux(body);
+  manejarWebhook(@Body() body: any, @Headers() headers: any) {  
+    return this.videoService.procesarWebhookMux(body, headers);  
   }
 
   @Get()
+  @UseGuards(AdminGuard)
   obtenerTodos() {
     return this.videoService.obtenerTodos();
   }
 
   @Get('categoria/:idCategoria')
+  @UseGuards(AdminGuard)
   obtenerPorCategoria(@Param('idCategoria') idCategoria: string) {
     return this.videoService.obtenerPorCategoria(idCategoria);
   }
 
   @Get(':id')
+  @UseGuards(AdminGuard)
   obtenerPorId(@Param('id') id: string) {
     return this.videoService.obtenerPorId(id);
   }
@@ -44,9 +47,9 @@ export class VideoController {
   actualizar(
     @Param('id') id: string,
     @Body() body: any,
-    @UploadedFile() file: Express.Multer.File 
+    @UploadedFile() file: Express.Multer.File
   ) {
-    return this.videoService.actualizar(id, body, file); 
+    return this.videoService.actualizar(id, body, file);
   }
 
   @Delete(':id')
