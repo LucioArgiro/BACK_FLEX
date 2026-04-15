@@ -4,6 +4,7 @@ import type { Response, Request } from 'express';
 import { AdminGuard } from './admin.guard';
 import { CreateUsuarioDto } from '../usuario/dto/create-usuario.dto';
 import { LoginDto } from './dto/login.dto';
+import { VerificarOtpDto } from './dto/verificar-otp.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -13,6 +14,11 @@ export class AuthController {
   async registrar(@Body() dto: CreateUsuarioDto) {
     return this.authService.registrar(dto);
   }
+
+  @Post('verificar-email')
+async verificarEmail(@Body() dto: VerificarOtpDto) {
+  return this.authService.verificarEmail(dto.correo, dto.codigo);
+}
 
   @Post('login')
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {

@@ -31,6 +31,9 @@ export class Usuario {
   fechaNacimiento!: Date;
 
   @Column({ nullable: true })
+  documentoIdentidad!: string;
+
+  @Column({ nullable: true })
   pais!: string;
 
   @Column({ nullable: true })
@@ -48,13 +51,21 @@ export class Usuario {
   @Column({ type: 'enum', enum: RolUsuario, default: RolUsuario.CLIENTE })
   rol!: RolUsuario;
 
+  @Column({ default: false })
+  correoVerificado!: boolean;
+
+@Column({ type: 'varchar', nullable: true })
+  codigoOtp!: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  expiracionOtp!: Date | null;
+
   @CreateDateColumn()
   fechaCreacion!: Date;
 
   @UpdateDateColumn()
   fechaActualizacion!: Date;
 
-  // Relación: Un usuario puede tener muchas compras
   @OneToMany(() => Compra, (compra) => compra.usuario)
   compras!: Compra[];
 }
