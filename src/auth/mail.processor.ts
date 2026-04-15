@@ -18,13 +18,40 @@ export class MailProcessor extends WorkerHost {
 
   async process(job: Job<any, any, string>): Promise<any> {
     this.logger.log(`Procesando trabajo por API: ${job.name} (ID: ${job.id})`);
-    
+
     switch (job.name) {
       case 'enviar-bienvenida':
         await this.enviarCorreoBienvenida(job.data);
         break;
+      case 'enviar-otp':
+        await this.enviarCorreoOtp(job.data);
+        break;
       default:
         this.logger.warn(`No hay instrucciones para el trabajo: ${job.name}`);
+    }
+  }
+
+  private generarHtmlOtp(nombre: string, codigo: string): string {
+    const filePath = path.join(process.cwd(), 'dist', 'src', 'templates', 'otp.hbs');
+    const templateBase = fs.readFileSync(filePath, 'utf8');
+    const templateCompilado = handlebars.compile(templateBase);
+    return templateCompilado({ nombre, codigo });
+  }
+
+  private async enviarCorreoOtp(data: { correo: string; nombre: string; codigo: string }) {
+    try {
+      const { data: resendData, error } = await this.resend.emails.send({
+        from: `Flex Studio <${this.configService.get('EMAIL_FROM') || 'onboarding@resend.dev'}>`,
+        to: data.correo,
+        subject: 'Tu código de verificación - Flex Studio',
+        html: this.generarHtmlOtp(data.nombre, data.codigo),
+      });
+
+      if (error) throw new Error(JSON.stringify(error));
+      this.logger.log(`Correo OTP enviado a ${data.correo}. ID: ${resendData?.id}`);
+    } catch (error) {
+      this.logger.error(`Error enviando OTP vía API a ${data.correo}`, error);
+      throw error;
     }
   }
 
@@ -51,7 +78,8 @@ export class MailProcessor extends WorkerHost {
       this.logger.log(`Correo de bienvenida enviado a ${data.correo}. ID: ${resendData?.id}`);
     } catch (error) {
       this.logger.error(`Error enviando el correo vía API a ${data.correo}`, error);
-      throw error; 
+      throw error;
     }
   }
+
 }

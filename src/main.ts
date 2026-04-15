@@ -13,7 +13,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
-
+  
   app.use(cookieParser()); 
   app.enableCors({ 
     origin: ['http://localhost:5173', process.env.FRONTEND_URL || ''], 

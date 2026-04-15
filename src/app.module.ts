@@ -14,6 +14,7 @@ import { AuthModule } from './auth/auth.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     CompraModule,
     AuthModule,
     CloudinaryModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
