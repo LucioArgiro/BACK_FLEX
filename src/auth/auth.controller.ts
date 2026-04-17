@@ -30,10 +30,7 @@ async verificarEmail(@Body() dto: VerificarOtpDto) {
       sameSite: isProduction ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 1,
     });
-    return {
-      mensaje: 'Login exitoso',
-      usuario
-    };
+    return {usuario};
   }
 
 @Post('logout')

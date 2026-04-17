@@ -15,10 +15,12 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AdminModule } from './admin/admin.module';
+import { validarEntorno } from 'env.validation';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate:validarEntorno, }),
+    
     ScheduleModule.forRoot(),
     BullModule.forRootAsync({
       imports: [ConfigModule],

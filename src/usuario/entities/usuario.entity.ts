@@ -1,5 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Compra } from '../../compra/entities/compra.entity';
+ 
+
 
 export enum RolUsuario {
   ADMIN = 'ADMIN',
@@ -27,8 +29,8 @@ export class Usuario {
   @Column({ nullable: true })
   telefono!: string;
 
-  @Column({ type: 'date', nullable: true })
-  fechaNacimiento!: Date;
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  fechaNacimiento!: string;
 
   @Column({ nullable: true })
   documentoIdentidad!: string;

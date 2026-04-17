@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Usuario } from '../../usuario/entities/usuario.entity';
 import { Categoria } from '../../categoria/entities/categoria.entity';
 
@@ -16,6 +16,9 @@ export enum PlataformaPago {
 }
 
 @Entity('compras')
+@Index(['estado', 'fechaCompra'])        // → limpiarComprasPendientes()
+@Index(['idUsuario', 'estado'])          // → obtenerMisClasesCompradas()
+@Index(['grupoPagoId'])                   // → webhooks MP y PayPal
 export class Compra {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

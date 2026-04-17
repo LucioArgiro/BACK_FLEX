@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { CreateUsuarioDto } from 'src/usuario/dto/create-usuario.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { CaptchaService } from './captcha.service';
 
 @Injectable()
 export class AuthService {
@@ -14,26 +15,33 @@ export class AuthService {
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
     private readonly jwtService: JwtService,
+    private readonly captchaService: CaptchaService,
     @InjectQueue('email-queue') private readonly emailQueue: Queue,
   ) { }
 
-  async registrar(dto: CreateUsuarioDto) {
-    const usuarioExiste = await this.usuarioRepository.findOne({ where: { correo: dto.correo } });
+ async registrar(dto: CreateUsuarioDto) {
+    await this.captchaService.validarToken(dto.captchaToken);
+    const { captchaToken, ...datosUsuario } = dto;
+    const usuarioExiste = await this.usuarioRepository.findOne({ where: { correo: datosUsuario.correo } });
     if (usuarioExiste) throw new BadRequestException('El correo ya está registrado');
 
     const salt = await bcrypt.genSalt(10);
-    const contrasenaHasheada = await bcrypt.hash(dto.contrasena, salt);
+    const contrasenaHasheada = await bcrypt.hash(datosUsuario.contrasena, salt);
+    
     const codigoSecreto = Math.floor(100000 + Math.random() * 900000).toString();
     const expiracion = new Date();
     expiracion.setMinutes(expiracion.getMinutes() + 15);
+    
     const nuevoUsuario = this.usuarioRepository.create({
-      ...dto,
+      ...datosUsuario,
       contrasena: contrasenaHasheada,
       correoVerificado: false,
       codigoOtp: codigoSecreto,
       expiracionOtp: expiracion,
     });
+    
     await this.usuarioRepository.save(nuevoUsuario);
+    
     try {
       await this.emailQueue.add('enviar-otp', {
         correo: nuevoUsuario.correo,

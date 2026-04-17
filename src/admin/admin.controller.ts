@@ -11,4 +11,9 @@ export class AdminController {
   async getHistorialClientes() {
     return await this.adminService.obtenerHistorialClientes();
   }
+
+  @Get('estadisticas')
+  async getEstadisticas() {
+    return await this.adminService.obtenerEstadisticasGlobales();
+  }
 }

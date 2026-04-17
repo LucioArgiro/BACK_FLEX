@@ -42,8 +42,6 @@ export class MercadoPagoService implements IPasarelaPago {
           },
           auto_return: 'approved',
           external_reference: grupoPagoId,
-          // 💡 TIP: Cuando subas esto a producción, cambia esta línea por:
-          // notification_url: process.env.WEBHOOK_URL,
           notification_url: 'https://ricki-subglacial-shenna.ngrok-free.dev/compras/webhook/mercadopago',
         },
       });
