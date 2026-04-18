@@ -7,10 +7,12 @@ import { PaypalService } from './services/paypal.service';
 import { Compra } from './entities/compra.entity';
 import { Usuario } from '../usuario/entities/usuario.entity';
 import { Categoria } from '../categoria/entities/categoria.entity';
+import { AuthModule } from '../auth/auth.module'; 
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Compra, Usuario, Categoria]),
+    AuthModule,
   ],
   controllers: [
     CompraController,
@@ -21,7 +23,7 @@ import { Categoria } from '../categoria/entities/categoria.entity';
     PaypalService,
   ],
   exports: [
-    CompraService,
+    CompraService, 
   ],
 })
 export class CompraModule {}

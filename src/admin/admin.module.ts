@@ -3,11 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { Usuario } from '../usuario/entities/usuario.entity';
-// Importar Compra no es estrictamente necesario aquí porque consultamos desde Usuario,
-// pero si luego haces consultas desde compras, lo agregas.
+ import { Compra } from '../compra/entities/compra.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Usuario])],
+  imports: [TypeOrmModule.forFeature([Usuario, Compra])],
   controllers: [AdminController],
   providers: [AdminService],
 })

@@ -5,6 +5,7 @@ import { CrearCompraDto } from './dto/crear-compra.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MercadoPagoService } from './services/mercadopago.service'; 
 import { PaypalService } from './services/paypal.service';
+import { CaptchaService } from '../auth/captcha.service';
 
 
 @Controller('compras')
@@ -13,13 +14,16 @@ export class CompraController {
     private readonly compraService: CompraService,
     private readonly mercadoPagoService: MercadoPagoService, 
     private readonly PaypalService: PaypalService,
+    private readonly captchaService: CaptchaService,
   ) { }
 
-  @UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard)
   @Post('iniciar')
   async iniciarCompra(@Req() req, @Body() crearCompraDto: CrearCompraDto) {
+    await this.captchaService.validarToken(crearCompraDto.captchaToken);
+    const { captchaToken, ...datosCompraLimpios } = crearCompraDto;
     const idUsuario = req.user.id;
-    return this.compraService.iniciarProcesoCompra(idUsuario, crearCompraDto);
+    return this.compraService.iniciarProcesoCompra(idUsuario, datosCompraLimpios);
   }
 
   @Post('webhook/mercadopago')

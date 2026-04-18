@@ -52,4 +52,7 @@ export class CreateUsuarioDto {
   @IsOptional()
   codigoPostal?: string;
 
+  @IsString()
+  @IsNotEmpty({ message: 'El token de captcha es obligatorio' })
+  captchaToken!: string;
 }

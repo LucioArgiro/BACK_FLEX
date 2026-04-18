@@ -25,13 +25,12 @@ export class CompraService {
   ) { }
 
   
-  async iniciarProcesoCompra(idUsuario: string, dto: CrearCompraDto) {
+ async iniciarProcesoCompra(idUsuario: string, dto: Omit<CrearCompraDto, 'captchaToken'>) {
     const usuario = await this.usuarioRepository.findOne({ where: { id: idUsuario } });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
     const categorias = await this.categoriaRepository.find({
       where: { id: In(dto.idsCategorias) }
     });
-
     if (categorias.length === 0) throw new NotFoundException('No se encontraron las clases seleccionadas');
     const comprasPrevias = await this.compraRepository.find({
       where: {
@@ -39,25 +38,17 @@ export class CompraService {
         idCategoria: In(dto.idsCategorias)
       }
     });
-
     const yaCompradas = comprasPrevias.filter(c => c.estado === EstadoPago.APROBADO);
     if (yaCompradas.length > 0) {
       throw new BadRequestException('Ya posees una suscripción activa para una o más clases de este carrito.');
     }
 
     const grupoPagoId = crypto.randomUUID();
-
-    // SEMÁFORO DE PAÍS
-    const esArgentina = usuario.pais?.toLowerCase() === 'argentina' || usuario.pais?.toLowerCase() === 'ar';
-    const plataformaSeleccionada = esArgentina ? PlataformaPago.MERCADOPAGO : PlataformaPago.PAYPAL;
-
+    const plataformaSeleccionada = dto.plataforma;
+    const esMercadoPago = plataformaSeleccionada === PlataformaPago.MERCADOPAGO;
     let nuevasCompras: Compra[] = [];
-
     for (const categoria of categorias) {
       let compra = comprasPrevias.find(c => c.idCategoria === categoria.id && c.estado === EstadoPago.PENDIENTE);
-
-      // 👇 CORRECCIÓN BUG CARRITO ABANDONADO: 
-      // Solo creamos la entidad si no existe
       if (!compra) {
         compra = this.compraRepository.create({
           idUsuario: usuario.id,
@@ -66,28 +57,27 @@ export class CompraService {
         });
       }
       
-      // Pero SIEMPRE actualizamos los precios y plataforma para tener el dato más fresco
       compra.plataforma = plataformaSeleccionada;
-      compra.montoCobrado = esArgentina ? categoria.precioArs : categoria.precioUsd;
-      compra.moneda = esArgentina ? 'ARS' : 'USD';
+      compra.montoCobrado = esMercadoPago ? categoria.precioArs : categoria.precioUsd;
+      compra.moneda = esMercadoPago ? 'ARS' : 'USD';
       compra.grupoPagoId = grupoPagoId;
-      
       nuevasCompras.push(compra);
     }
- 
     nuevasCompras = await this.compraRepository.save(nuevasCompras);
-    const pasarela = esArgentina ? this.mercadoPagoService : this.paypalService;
+    const pasarela = esMercadoPago ? this.mercadoPagoService : this.paypalService;
     const resultadoPago = await pasarela.crearIntencionPago(grupoPagoId, usuario, categorias);
+    
     nuevasCompras.forEach(compra => {
       compra.idPagoExterno = resultadoPago.idPagoExterno;
       compra.urlPago = resultadoPago.urlPago || '';
     });
 
     await this.compraRepository.save(nuevasCompras);
+    
     return {
       url: resultadoPago.urlPago,
       plataforma: plataformaSeleccionada,
-      idPagoExterno: resultadoPago.idPagoExterno, // 👈 CRÍTICO para el SDK de PayPal
+      idPagoExterno: resultadoPago.idPagoExterno, 
     };
   }
 
