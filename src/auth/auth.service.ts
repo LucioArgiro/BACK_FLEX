@@ -113,7 +113,7 @@ async login(correo: string, contrasenaPlana: string) {
 
   async solicitarRecuperacion(correo: string) {
     const usuario = await this.usuarioRepository.findOne({ where: { correo } });
-    if (!usuario) return { mensaje: 'Si el correo existe, recibirás un enlace de recuperación.' };
+    if (!usuario) return { mensaje: 'Revisa tu correo electrónico. Enviamos un enlace de recuperación.' };
     const token = crypto.randomUUID();
     const expiracion = new Date();
     expiracion.setHours(expiracion.getHours() + 1); 
@@ -133,7 +133,7 @@ async login(correo: string, contrasenaPlana: string) {
       console.error('No se pudo encolar el correo de recuperación:', error);
     }
 
-    return { mensaje: 'Si el correo existe, recibirás un enlace de recuperación.' };
+    return { mensaje: 'Revisa tu correo electrónico. Enviamos un enlace de recuperación.' };
   }
 
   async cambiarContrasena(token: string, nuevaContrasena: string) {
@@ -153,6 +153,6 @@ async login(correo: string, contrasenaPlana: string) {
     usuario.expiracionRecuperacion = null;
     await this.usuarioRepository.save(usuario);
 
-    return { mensaje: 'Contraseña actualizada exitosamente. Ya puedes iniciar sesión.' };
+    return { mensaje: 'Contraseña actualizada exitosamente! Ya puedes iniciar sesión.' };
   }
 }
