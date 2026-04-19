@@ -8,6 +8,7 @@ import { CreateUsuarioDto } from 'src/usuario/dto/create-usuario.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { CaptchaService } from './captcha.service';
+import { v4 as uuidv4 } from 'uuid'
 
 @Injectable()
 export class AuthService {
@@ -108,5 +109,50 @@ async login(correo: string, contrasenaPlana: string) {
         pais: usuario.pais,
       }
     };
+  }
+
+  async solicitarRecuperacion(correo: string) {
+    const usuario = await this.usuarioRepository.findOne({ where: { correo } });
+    if (!usuario) return { mensaje: 'Si el correo existe, recibirás un enlace de recuperación.' };
+    const token = crypto.randomUUID();
+    const expiracion = new Date();
+    expiracion.setHours(expiracion.getHours() + 1); 
+
+    usuario.tokenRecuperacion = token;
+    usuario.expiracionRecuperacion = expiracion;
+    await this.usuarioRepository.save(usuario);
+
+    try {
+      await this.emailQueue.add('enviar-recuperacion', {
+        correo: usuario.correo,
+        nombre: usuario.nombre,
+        token: token
+      });
+      console.log(`\n 🚀 [MODO DEV] LINK DE RECUPERACIÓN PARA ${usuario.correo}: http://localhost:5173/reset-password?token=${token} \n`);
+    } catch (error) {
+      console.error('No se pudo encolar el correo de recuperación:', error);
+    }
+
+    return { mensaje: 'Si el correo existe, recibirás un enlace de recuperación.' };
+  }
+
+  async cambiarContrasena(token: string, nuevaContrasena: string) {
+    const usuario = await this.usuarioRepository.findOne({ where: { tokenRecuperacion: token } });
+    if (!usuario) {
+      throw new BadRequestException('El enlace de recuperación es inválido o ha expirado.');
+    }
+    if (new Date() > usuario.expiracionRecuperacion!) {
+      usuario.tokenRecuperacion = null;
+      usuario.expiracionRecuperacion = null;
+      await this.usuarioRepository.save(usuario);
+      throw new BadRequestException('El enlace ha expirado. Por favor solicita uno nuevo.');
+    }
+    const salt = await bcrypt.genSalt(10);
+    usuario.contrasena = await bcrypt.hash(nuevaContrasena, salt);
+    usuario.tokenRecuperacion = null;
+    usuario.expiracionRecuperacion = null;
+    await this.usuarioRepository.save(usuario);
+
+    return { mensaje: 'Contraseña actualizada exitosamente. Ya puedes iniciar sesión.' };
   }
 }

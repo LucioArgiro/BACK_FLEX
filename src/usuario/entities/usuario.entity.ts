@@ -1,8 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Compra } from '../../compra/entities/compra.entity';
  
-
-
 export enum RolUsuario {
   ADMIN = 'ADMIN',
   CLIENTE = 'CLIENTE',
@@ -61,6 +59,12 @@ export class Usuario {
 
   @Column({ type: 'timestamp', nullable: true })
   expiracionOtp!: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  tokenRecuperacion!: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  expiracionRecuperacion!: Date | null;
 
   @CreateDateColumn()
   fechaCreacion!: Date;
