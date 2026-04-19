@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { padding: 20px; border: 1px solid #ddd; border-radius: 5px; max-width: 600px; }
+        .header { background: #d7f250; padding: 15px; font-weight: bold; font-size: 18px; color: #000; text-align: center; }
+        .info { margin: 20px 0; padding: 15px; background: #f9f9f9; border-left: 4px solid #d7f250; }
+        .mensaje { white-space: pre-wrap; margin-top: 20px; padding: 15px; border: 1px dashed #ccc; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">Nueva Consulta desde la Web</div>
+        <div class="info">
+            <strong>Nombre:</strong> {{nombre}}<br>
+            <strong>Correo:</strong> {{correo}}
+        </div>
+        <p><strong>Mensaje:</strong></p>
+        <div class="mensaje">{{mensaje}}</div>
+        <br>
+        <p><em>* Puedes responder directamente a este correo para hablar con el cliente.</em></p>
+    </div>
+</body>
+</html>

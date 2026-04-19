@@ -11,6 +11,7 @@ import * as handlebars from 'handlebars';
 export class MailProcessor extends WorkerHost {
   private readonly logger = new Logger(MailProcessor.name);
   private readonly resend: Resend;
+  
   constructor(private readonly configService: ConfigService) {
     super();
     this.resend = new Resend(this.configService.get<string>('EMAIL_PASS'));
@@ -26,11 +27,71 @@ export class MailProcessor extends WorkerHost {
       case 'enviar-otp':
         await this.enviarCorreoOtp(job.data);
         break;
+      case 'enviar-recuperacion':
+        await this.enviarCorreoRecuperacion(job.data);
+        break;
+      case 'enviar-consulta':
+        await this.enviarCorreoConsulta(job.data);
+        break;
       default:
         this.logger.warn(`No hay instrucciones para el trabajo: ${job.name}`);
     }
   }
 
+  private generarHtmlConsulta(nombre: string, correo: string, mensaje: string): string {
+    const filePath = path.join(process.cwd(), 'dist', 'src', 'templates', 'consulta.hbs');
+    const templateBase = fs.readFileSync(filePath, 'utf8');
+    const templateCompilado = handlebars.compile(templateBase);
+    return templateCompilado({ nombre, correo, mensaje });
+  }
+
+  private async enviarCorreoConsulta(data: { nombre: string; correo: string; mensaje: string }) {
+    try {
+      const { data: resendData, error } = await this.resend.emails.send({
+        from: `Flex Studio Web <${this.configService.get('EMAIL_FROM') || 'onboarding@resend.dev'}>`,
+        to: 'flexstudio89@gmail.com',  
+        replyTo: data.correo,        
+        subject: `Nueva Consulta de ${data.nombre}`,
+        html: this.generarHtmlConsulta(data.nombre, data.correo, data.mensaje),
+      });
+
+      if (error) throw new Error(JSON.stringify(error));
+      this.logger.log(`Consulta de ${data.correo} enviada a Cande. ID: ${resendData?.id}`);
+    } catch (error) {
+      this.logger.error(`Error enviando consulta de ${data.correo}`, error);
+      throw error;
+    }
+  }
+
+
+  private generarHtmlRecuperacion(nombre: string, token: string): string {
+    const filePath = path.join(process.cwd(), 'dist', 'src', 'templates', 'recuperacion.hbs');
+    const templateBase = fs.readFileSync(filePath, 'utf8');
+    const templateCompilado = handlebars.compile(templateBase);
+    const frontUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const linkRecuperacion = `${frontUrl}/reset-password?token=${token}`;
+
+    return templateCompilado({ nombre, linkRecuperacion });
+  }
+
+  private async enviarCorreoRecuperacion(data: { correo: string; nombre: string; token: string }) {
+    try {
+      const { data: resendData, error } = await this.resend.emails.send({
+        from: `Flex Studio <${this.configService.get('EMAIL_FROM') || 'onboarding@resend.dev'}>`,
+        to: data.correo,
+        subject: 'Recupera tu contraseña - Flex Studio',
+        html: this.generarHtmlRecuperacion(data.nombre, data.token),
+      });
+
+      if (error) throw new Error(JSON.stringify(error));
+      this.logger.log(`Correo de RECUPERACIÓN enviado a ${data.correo}. ID: ${resendData?.id}`);
+    } catch (error) {
+      this.logger.error(`Error enviando correo de recuperación vía API a ${data.correo}`, error);
+      throw error;
+    }
+  }
+
+  // --- MÉTODOS DE OTP (REGISTRO) ---
   private generarHtmlOtp(nombre: string, codigo: string): string {
     const filePath = path.join(process.cwd(), 'dist', 'src', 'templates', 'otp.hbs');
     const templateBase = fs.readFileSync(filePath, 'utf8');
@@ -55,6 +116,7 @@ export class MailProcessor extends WorkerHost {
     }
   }
 
+  // --- MÉTODOS DE BIENVENIDA ---
   private generarHtmlBienvenida(nombre: string): string {
     const filePath = path.join(process.cwd(), 'dist', 'src', 'templates', 'bienvenida.hbs');
     const templateBase = fs.readFileSync(filePath, 'utf8');
@@ -81,5 +143,4 @@ export class MailProcessor extends WorkerHost {
       throw error;
     }
   }
-
 }
