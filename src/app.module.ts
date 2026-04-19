@@ -16,6 +16,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AdminModule } from './admin/admin.module';
 import { validarEntorno } from 'env.validation';
+import { ContactoModule } from './contacto/contacto.module';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { validarEntorno } from 'env.validation';
     AuthModule,
     CloudinaryModule,
     AdminModule,
+    ContactoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
