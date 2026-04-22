@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bullmq'; // 👈 1. NUEVO IMPORT AQUÍ
 import { CompraController } from './compra.controller';
 import { CompraService } from './services/compra.service';
 import { MercadoPagoService } from './services/mercadopago.service';
@@ -13,6 +14,10 @@ import { AuthModule } from '../auth/auth.module';
   imports: [
     TypeOrmModule.forFeature([Compra, Usuario, Categoria]),
     AuthModule,
+    // 👇 2. REGISTRO DE LA COLA AQUÍ 👇
+    BullModule.registerQueue({
+      name: 'email-queue',
+    }),
   ],
   controllers: [
     CompraController,

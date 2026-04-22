@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Compra } from '../../compra/entities/compra.entity';
+import { Comprobante } from '../../comprobante/entities/comprobante.entity'; 
  
 export enum RolUsuario {
   ADMIN = 'ADMIN',
@@ -74,4 +75,7 @@ export class Usuario {
 
   @OneToMany(() => Compra, (compra) => compra.usuario)
   compras!: Compra[];
+
+  @OneToMany(() => Comprobante, (comprobante) => comprobante.usuario)
+  comprobantes!: Comprobante[];
 }

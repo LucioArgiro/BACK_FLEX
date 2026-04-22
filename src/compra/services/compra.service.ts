@@ -1,19 +1,21 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, LessThan } from 'typeorm'; // 👈 Se importó LessThan
+import { Repository, In, LessThan } from 'typeorm'; 
 import { Compra, EstadoPago, PlataformaPago } from '../entities/compra.entity';
 import { Usuario } from '../../usuario/entities/usuario.entity';
 import { Categoria } from '../../categoria/entities/categoria.entity';
 import { CrearCompraDto } from '../dto/crear-compra.dto';
 import { MercadoPagoService } from './mercadopago.service';
 import { PaypalService } from './paypal.service';
-import { Cron, CronExpression } from '@nestjs/schedule'; // 👈 Importaciones del Cron
-
+import { Cron, CronExpression } from '@nestjs/schedule'; 
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class CompraService {
   constructor(
+    
     @InjectRepository(Compra)
     private readonly compraRepository: Repository<Compra>,
     @InjectRepository(Usuario)
@@ -22,6 +24,8 @@ export class CompraService {
     private readonly categoriaRepository: Repository<Categoria>,
     private readonly mercadoPagoService: MercadoPagoService,
     private readonly paypalService: PaypalService,
+    @InjectQueue('email-queue') private readonly emailQueue: Queue,
+    
   ) { }
 
   
@@ -91,15 +95,13 @@ export class CompraService {
     if (!pagoReal || !pagoReal.external_reference) return;
     const idGrupoLocal = pagoReal.external_reference;
     const comprasDelCarrito = await this.compraRepository.find({
-      where: { grupoPagoId: idGrupoLocal }
+      where: { grupoPagoId: idGrupoLocal },
+      relations: ['usuario', 'categoria'] 
     });
-
     if (comprasDelCarrito.length === 0) return;
     let requiereActualizacion = false;
-
     comprasDelCarrito.forEach(compra => {
       if (compra.estado === EstadoPago.APROBADO) return;
-
       if (pagoReal.status === 'approved') {
         compra.estado = EstadoPago.APROBADO;
         requiereActualizacion = true;
@@ -112,6 +114,13 @@ export class CompraService {
     if (requiereActualizacion) {
       await this.compraRepository.save(comprasDelCarrito);
       console.log(`¡ÉXITO! Orden ${idGrupoLocal} actualizada a: ${pagoReal.status?.toUpperCase()}`);
+      const todasAprobadas = comprasDelCarrito.every(c => c.estado === EstadoPago.APROBADO);
+      if (todasAprobadas && comprasDelCarrito[0].usuario) {
+        await this.emailQueue.add('enviar-comprobante', {
+          usuario: comprasDelCarrito[0].usuario,
+          compras: comprasDelCarrito
+        });
+      }
     }
   }
 
@@ -129,16 +138,15 @@ export class CompraService {
     if (!idGrupoLocal) return;
     
     const comprasDelCarrito = await this.compraRepository.find({
-      where: { grupoPagoId: idGrupoLocal }
+      where: { grupoPagoId: idGrupoLocal },
+      relations: ['usuario', 'categoria']
     });
     
     if (comprasDelCarrito.length === 0) return;
     let requiereActualizacion = false;
-
-    // 👇 MEJORA: Escuchar si el cliente pide un reembolso para revocarle el acceso
     if (tipoEvento === 'PAYMENT.CAPTURE.REFUNDED' || tipoEvento === 'PAYMENT.CAPTURE.REVERSED') {
       comprasDelCarrito.forEach(compra => {
-        compra.estado = EstadoPago.RECHAZADO; // Le quitamos el acceso
+        compra.estado = EstadoPago.RECHAZADO;
         requiereActualizacion = true;
       });
       if (requiereActualizacion) {
@@ -147,25 +155,27 @@ export class CompraService {
       }
       return;
     }
-
-    // Si no es reembolso, validamos que sea pago exitoso
     if (tipoEvento !== 'CHECKOUT.ORDER.APPROVED' && tipoEvento !== 'PAYMENT.CAPTURE.COMPLETED') {
       return;
     }
-
     comprasDelCarrito.forEach(compra => {
       if (compra.estado === EstadoPago.APROBADO) return;
       compra.estado = EstadoPago.APROBADO;
       requiereActualizacion = true;
     });
 
-    if (requiereActualizacion) {
+  if (requiereActualizacion) {
       await this.compraRepository.save(comprasDelCarrito);
-      console.log(`✅ ¡ÉXITO! Orden PayPal ${idGrupoLocal} actualizada a APROBADO`);
-    }
+      console.log(`¡ÉXITO! Orden PayPal ${idGrupoLocal} actualizada a APROBADO`);
+      const todasAprobadas = comprasDelCarrito.every(c => c.estado === EstadoPago.APROBADO);
+      if (todasAprobadas && comprasDelCarrito[0].usuario) {
+        await this.emailQueue.add('enviar-comprobante', {
+          usuario: comprasDelCarrito[0].usuario,
+          compras: comprasDelCarrito
+        });
+      }
   }
-
-  // --- OBTENCIÓN DE CLASES ---
+}
 
   async obtenerMisClasesCompradas(idUsuario: string) {
     const comprasAprobadas = await this.compraRepository.find({
@@ -213,7 +223,7 @@ export class CompraService {
       });
  
       if (resultado.affected && resultado.affected > 0) {
-        console.log(`🧹 [Limpieza Automática]: Se eliminaron ${resultado.affected} órdenes PENDIENTES caducadas.`);
+        console.log(`[Limpieza Automática]: Se eliminaron ${resultado.affected} órdenes PENDIENTES caducadas.`);
       }
     } catch (error) {
       console.error('Error durante la limpieza automática de compras:', error);
