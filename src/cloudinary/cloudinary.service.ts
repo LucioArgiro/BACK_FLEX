@@ -7,7 +7,7 @@ export class CloudinaryService {
   uploadFile(file: Express.Multer.File, folderName: string = 'flex-studio/categorias'): Promise<any> {
     return new Promise<any>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: folderName },  
+        { folder: folderName },
         (error, result) => {
           if (error) return reject(error);
           resolve(result);
@@ -39,5 +39,23 @@ export class CloudinaryService {
     } catch (error) {
       return null;
     }
+  }
+
+  uploadPdfBuffer(buffer: Buffer, nombreArchivo: string, folderName: string = 'flex-studio/comprobantes'): Promise<any> {
+    return new Promise<any>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { 
+          folder: folderName,
+          public_id: nombreArchivo, 
+          format: 'pdf',           
+          resource_type: 'image',   
+        },  
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        },
+      );
+      streamifier.createReadStream(buffer).pipe(uploadStream);
+    });
   }
 }

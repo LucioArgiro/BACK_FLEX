@@ -2,23 +2,21 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, Jo
 import { Usuario } from '../../usuario/entities/usuario.entity';
 import { Categoria } from '../../categoria/entities/categoria.entity';
 
-// 👇 Definimos los estados posibles del pago
 export enum EstadoPago {
   PENDIENTE = 'PENDIENTE',
   APROBADO = 'APROBADO',
   RECHAZADO = 'RECHAZADO',
 }
 
-// 👇 Definimos las pasarelas que usamos
 export enum PlataformaPago {
   MERCADOPAGO = 'MERCADOPAGO',
   PAYPAL = 'PAYPAL',
 }
 
 @Entity('compras')
-@Index(['estado', 'fechaCompra'])        // → limpiarComprasPendientes()
-@Index(['idUsuario', 'estado'])          // → obtenerMisClasesCompradas()
-@Index(['grupoPagoId'])                   // → webhooks MP y PayPal
+@Index(['estado', 'fechaCompra'])         
+@Index(['idUsuario', 'estado'])        
+@Index(['grupoPagoId'])                   
 export class Compra {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

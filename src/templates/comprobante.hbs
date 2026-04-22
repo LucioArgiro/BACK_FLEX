@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comprobante de Pago</title>
+  <style>
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .header { background-color: #131313; padding: 30px 20px; text-align: center; }
+    .header h1 { color: #d7f250; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
+    .content { padding: 40px 30px; color: #3f3f46; line-height: 1.6; }
+    .content h2 { color: #18181b; font-size: 20px; margin-top: 0; }
+    .highlight { font-weight: bold; color: #131313; }
+    .footer { background-color: #fafafa; padding: 20px; text-align: center; border-top: 1px solid #e4e4e7; color: #71717a; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Flex Studio</h1>
+    </div>
+    
+    <div class="content">
+      <h2>¡Gracias por tu compra, {{nombre}}!</h2>
+      <p>Tu pago ha sido procesado exitosamente y ya tienes acceso a tus clases desde tu panel de alumno.</p>
+      
+      <p>Adjunto a este correo encontrarás el <strong>comprobante oficial de tu pago</strong> (Recibo #{{idRecibo}}) en formato PDF para tus registros.</p>
+      
+      <p>Si tienes alguna consulta sobre tu suscripción o necesitas ayuda técnica, no dudes en responder directamente a este correo. ¡Estamos para ayudarte!</p>
+      
+      <p>A entrenar,<br><span class="highlight">El equipo de Flex Studio</span></p>
+    </div>
+
+    <div class="footer">
+      © Flex Studio. Todos los derechos reservados.<br>
+      Este es un correo generado automáticamente.
+    </div>
+  </div>
+</body>
+</html>

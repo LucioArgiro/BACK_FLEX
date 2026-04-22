@@ -9,12 +9,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { MailProcessor } from './mail.processor';
 import { CaptchaService } from './captcha.service';
-
+// 👇 Ajusté el nombre del archivo al estándar de NestJS (minúsculas)
+import { ComprobanteModule } from '../comprobante/ComprobanteModule'; 
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Usuario]),
-    BullModule.registerQueue({name: 'email-queue',}),
+    BullModule.registerQueue({ name: 'email-queue' }),
+    ComprobanteModule, 
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -28,4 +30,4 @@ import { CaptchaService } from './captcha.service';
   providers: [AuthService, JwtStrategy, MailProcessor, CaptchaService],
   exports: [CaptchaService] 
 })
-export class AuthModule { }
+export class AuthModule {}

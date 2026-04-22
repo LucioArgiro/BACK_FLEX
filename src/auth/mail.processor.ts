@@ -6,13 +6,17 @@ import { Resend } from 'resend';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as handlebars from 'handlebars';
+import { ComprobanteService } from '../comprobante/ComprobanteService'; 
 
 @Processor('email-queue')
 export class MailProcessor extends WorkerHost {
   private readonly logger = new Logger(MailProcessor.name);
   private readonly resend: Resend;
   
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService, 
+    private readonly comprobanteService: ComprobanteService 
+  ) {
     super();
     this.resend = new Resend(this.configService.get<string>('EMAIL_PASS'));
   }
@@ -33,8 +37,48 @@ export class MailProcessor extends WorkerHost {
       case 'enviar-consulta':
         await this.enviarCorreoConsulta(job.data);
         break;
+      case 'enviar-comprobante':
+        await this.enviarCorreoComprobante(job.data);
+        break;
+        
       default:
         this.logger.warn(`No hay instrucciones para el trabajo: ${job.name}`);
+    }
+  }
+
+  // --- MÉTODOS DE COMPROBANTE DE PAGO ---
+  private generarHtmlComprobante(nombre: string, idRecibo: string): string {
+    const filePath = path.join(process.cwd(), 'dist', 'src', 'templates', 'comprobante.hbs');
+    const templateBase = fs.readFileSync(filePath, 'utf8');
+    const templateCompilado = handlebars.compile(templateBase);
+    return templateCompilado({ nombre, idRecibo });
+  }
+
+  private async enviarCorreoComprobante(data: { usuario: any; compras: any[] }) {
+    try {
+      const { usuario, compras } = data;
+      this.logger.log(`Preparando comprobante y correo para ${usuario.correo}...`);
+
+      const grupoPagoId = compras[0].grupoPagoId;
+      const { comprobante, buffer } = await this.comprobanteService.generarYRegistrarComprobante(grupoPagoId, usuario);
+      const { data: resendData, error } = await this.resend.emails.send({
+        from: `Flex Studio <${this.configService.get('EMAIL_FROM') || 'onboarding@resend.dev'}>`,
+        to: usuario.correo,
+        subject: `Tu comprobante de pago #${comprobante.numeroRecibo} - Flex Studio`,
+        html: this.generarHtmlComprobante(usuario.nombre, comprobante.numeroRecibo),
+        attachments: [
+          {
+            filename: `Comprobante_${comprobante.numeroRecibo}.pdf`,
+            content: buffer,
+          }
+        ]
+      });
+
+      if (error) throw new Error(JSON.stringify(error));
+      this.logger.log(`✅ Comprobante ${comprobante.numeroRecibo} enviado a ${usuario.correo}. ID: ${resendData?.id}`);
+    } catch (error) {
+      this.logger.error(`❌ Error enviando comprobante a ${data.usuario?.correo}`, error);
+      throw error;
     }
   }
 
@@ -63,14 +107,12 @@ export class MailProcessor extends WorkerHost {
     }
   }
 
-
   private generarHtmlRecuperacion(nombre: string, token: string): string {
     const filePath = path.join(process.cwd(), 'dist', 'src', 'templates', 'recuperacion.hbs');
     const templateBase = fs.readFileSync(filePath, 'utf8');
     const templateCompilado = handlebars.compile(templateBase);
     const frontUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
     const linkRecuperacion = `${frontUrl}/reset-password?token=${token}`;
-
     return templateCompilado({ nombre, linkRecuperacion });
   }
 
@@ -91,7 +133,6 @@ export class MailProcessor extends WorkerHost {
     }
   }
 
-  // --- MÉTODOS DE OTP (REGISTRO) ---
   private generarHtmlOtp(nombre: string, codigo: string): string {
     const filePath = path.join(process.cwd(), 'dist', 'src', 'templates', 'otp.hbs');
     const templateBase = fs.readFileSync(filePath, 'utf8');
