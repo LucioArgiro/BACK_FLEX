@@ -14,6 +14,10 @@ export class Video {
 
   @Column()
   titulo!: string;
+
+  @Column({ type: 'text', nullable: true })
+  descripcion!: string;
+
   @Column({ nullable: true })
   assetId!: string;
 
@@ -28,10 +32,13 @@ export class Video {
   
   @Column({ type: 'int' })
   orden!: number;
+
   @Column({ type: 'int', nullable: true })
   duracion!: number;
+
   @Column()
   idCategoria!: string;
+
   @ManyToOne(() => Categoria, (categoria) => categoria.videos, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'idCategoria' })
   categoria!: Categoria;

@@ -2,6 +2,7 @@ import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/com
 import { AuthGuard } from '@nestjs/passport';
 import { RolUsuario } from '../usuario/entities/usuario.entity';
 
+
 @Injectable()
 export class AdminGuard extends AuthGuard('jwt') {
   canActivate(context: ExecutionContext) {

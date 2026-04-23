@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
 import { Usuario, RolUsuario } from '../usuario/entities/usuario.entity';
 import { Compra, EstadoPago } from '../compra/entities/compra.entity';
 import { ResumenClienteDto } from './dto/resumen-cliente.dto';
@@ -15,13 +15,11 @@ export class AdminService {
     private readonly compraRepository: Repository<Compra>,
   ) {}
 
-  async obtenerEstadisticasGlobales() {
-    // 1. Contamos los usuarios que son clientes
+async obtenerEstadisticasGlobales() {
     const totalUsuarios = await this.usuarioRepository.count({
       where: { rol: RolUsuario.CLIENTE }
     });
 
-    // 2. Sumamos las ventas y los ingresos en una sola consulta a la BD
     const estadisticas = await this.compraRepository.createQueryBuilder('compra')
       .where('compra.estado = :estadoAprobado', { estadoAprobado: EstadoPago.APROBADO })
       .select([
@@ -31,12 +29,56 @@ export class AdminService {
       ])
       .getRawOne();
 
- 
+
+   const hoy = new Date();
+    const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
+    const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const hace7Dias = new Date();
+    hace7Dias.setDate(hoy.getDate() - 7);
+    
+    const comprasAnio = await this.compraRepository.find({
+      where: { estado: EstadoPago.APROBADO, fechaCompra: MoreThanOrEqual(inicioAnio) }
+    });
+
+    // 👇 Nueva estructura más completa para cada período
+    const resumenPeriodos = {
+      hoy: { ars: 0, usd: 0, ventasArs: 0, ventasUsd: 0 },
+      semana: { ars: 0, usd: 0, ventasArs: 0, ventasUsd: 0 },
+      mes: { ars: 0, usd: 0, ventasArs: 0, ventasUsd: 0 },
+      anio: { ars: 0, usd: 0, ventasArs: 0, ventasUsd: 0 }
+    };
+
+    comprasAnio.forEach(compra => {
+      const monto = Number(compra.montoCobrado) || 0;
+      const fecha = new Date(compra.fechaCompra);
+      const esArs = compra.moneda === 'ARS';
+      const esUsd = compra.moneda === 'USD';
+
+      // Sumamos al Año (ya que la consulta base trae desde inicio de año)
+      if (esArs) { resumenPeriodos.anio.ars += monto; resumenPeriodos.anio.ventasArs++; }
+      if (esUsd) { resumenPeriodos.anio.usd += monto; resumenPeriodos.anio.ventasUsd++; }
+
+      if (fecha >= inicioMes) {
+        if (esArs) { resumenPeriodos.mes.ars += monto; resumenPeriodos.mes.ventasArs++; }
+        if (esUsd) { resumenPeriodos.mes.usd += monto; resumenPeriodos.mes.ventasUsd++; }
+      }
+      if (fecha >= hace7Dias) {
+        if (esArs) { resumenPeriodos.semana.ars += monto; resumenPeriodos.semana.ventasArs++; }
+        if (esUsd) { resumenPeriodos.semana.usd += monto; resumenPeriodos.semana.ventasUsd++; }
+      }
+      if (fecha >= inicioHoy) {
+        if (esArs) { resumenPeriodos.hoy.ars += monto; resumenPeriodos.hoy.ventasArs++; }
+        if (esUsd) { resumenPeriodos.hoy.usd += monto; resumenPeriodos.hoy.ventasUsd++; }
+      }
+    });
+
     return {
       totalUsuarios,
       clasesVendidas: Number(estadisticas.clasesVendidas) || 0,
       ingresosArs: Number(estadisticas.ingresosArs) || 0,
       ingresosUsd: Number(estadisticas.ingresosUsd) || 0,
+      resumenPeriodos // 👈 Mandamos la nueva super-estructura
     };
   }
 
