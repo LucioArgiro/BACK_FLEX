@@ -1,11 +1,18 @@
-import { Injectable, NotFoundException, InternalServerErrorException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Video, EstadoVideo } from './entities/video.entity';
 import { VideoGateway } from './video.gateway';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { Categoria } from '../categoria/entities/categoria.entity';
+import { Compra, EstadoPago } from '../compra/entities/compra.entity';
 import Mux from '@mux/mux-node';
+import { UpdateVideoDto } from './dto/update-video.dto';
 
 @Injectable()
 export class VideoService {
@@ -17,6 +24,8 @@ export class VideoService {
     @InjectRepository(Categoria)
     private categoriaRepository: Repository<Categoria>,
     private readonly videoGateway: VideoGateway,
+    @InjectRepository(Compra)
+    private readonly compraRepository: Repository<Compra>,
     private readonly cloudinaryService: CloudinaryService,
   ) {
     this.muxClient = new Mux({
@@ -29,11 +38,15 @@ export class VideoService {
     try {
       let urlImagen: string | undefined = undefined;
       if (archivoMiniatura) {
-        const resultadoCloudinary = await this.cloudinaryService.uploadFile(archivoMiniatura, 'flex-studio/videos');
+        const resultadoCloudinary = await this.cloudinaryService.uploadFile(
+          archivoMiniatura,
+          'flex-studio/videos',
+        );
         urlImagen = resultadoCloudinary.secure_url;
       }
       const nuevoVideo = this.videoRepository.create({
         titulo: datos.titulo,
+        descripcion: datos.descripcion,
         idCategoria: datos.idCategoria,
         duracion: parseInt(datos.duracion) || 0,
         orden: parseInt(datos.orden) || 1,
@@ -44,7 +57,7 @@ export class VideoService {
       const videoGuardado = await this.videoRepository.save(nuevoVideo);
       const upload = await this.muxClient.video.uploads.create({
         new_asset_settings: {
-          playback_policy: ['public'],
+          playback_policy: ['signed'],
           passthrough: videoGuardado.id,
         },
         cors_origin: '*',
@@ -56,8 +69,17 @@ export class VideoService {
       };
     } catch (err) {
       console.error('Error al generar URL de subida:', err);
-      throw new InternalServerErrorException('No se pudo generar el enlace de subida');
+      throw new InternalServerErrorException(
+        'No se pudo generar el enlace de subida',
+      );
     }
+  }
+
+  private formatearDuracion(segundosTotales: number): string {
+    if (!segundosTotales || segundosTotales === 0) return '0:00';
+    const minutos = Math.floor(segundosTotales / 60);
+    const segundos = segundosTotales % 60;
+    return `${minutos}:${segundos.toString().padStart(2, '0')}`;
   }
 
   async procesarWebhookMux(body: any, headers: any) {
@@ -65,20 +87,30 @@ export class VideoService {
     if (entorno === 'production') {
       const webhookSecret = process.env.MUX_WEBHOOK_SECRET;
       if (!webhookSecret) {
-        console.error('🚨 [Webhook Mux] Falta el secreto del webhook en el .env');
+        console.error(
+          '🚨 [Webhook Mux] Falta el secreto del webhook en el .env',
+        );
         throw new ForbiddenException('Petición denegada');
       }
 
       try {
         const payload = typeof body === 'string' ? body : JSON.stringify(body);
-        this.muxClient.webhooks.verifySignature(payload, headers, webhookSecret);
-
+        this.muxClient.webhooks.verifySignature(
+          payload,
+          headers,
+          webhookSecret,
+        );
       } catch (error) {
-        console.error('🚨 [Webhook Mux] INTENTO DE HACKEO: Firma de Mux inválida.', error);
+        console.error(
+          '🚨 [Webhook Mux] INTENTO DE HACKEO: Firma de Mux inválida.',
+          error,
+        );
         throw new ForbiddenException('Firma de seguridad inválida');
       }
     } else {
-      console.warn('⚠️ Webhook de Mux recibido en modo desarrollo. Saltando validación de firma...');
+      console.warn(
+        '⚠️ Webhook de Mux recibido en modo desarrollo. Saltando validación de firma...',
+      );
     }
     const evento = typeof body === 'string' ? JSON.parse(body) : body;
 
@@ -95,16 +127,21 @@ export class VideoService {
           playbackIdMuestra: asset.playback_ids[0].id,
           assetIdMuestra: asset.id,
         });
-        console.log(`✅ [Webhook] Video de muestra para Categoría [${categoriaId}] procesado y LISTO`);
-      }
-      else if (tipo === 'video.asset.errored') {
-        console.error(`❌ [Webhook] Mux falló al procesar el video de muestra de la Categoría [${categoriaId}]`);
+        console.log(
+          `✅ [Webhook] Video de muestra para Categoría [${categoriaId}] procesado y LISTO`,
+        );
+      } else if (tipo === 'video.asset.errored') {
+        console.error(
+          `❌ [Webhook] Mux falló al procesar el video de muestra de la Categoría [${categoriaId}]`,
+        );
       }
       return { mensaje: 'Webhook de categoría procesado' };
     }
 
     if (tipo === 'video.asset.ready') {
-      const video = await this.videoRepository.findOne({ where: { id: passthrough } });
+      const video = await this.videoRepository.findOne({
+        where: { id: passthrough },
+      });
       if (video) {
         video.assetId = asset.id;
         video.playbackId = asset.playback_ids[0].id;
@@ -116,37 +153,70 @@ export class VideoService {
     }
 
     if (tipo === 'video.asset.errored') {
-      const video = await this.videoRepository.findOne({ where: { id: passthrough } });
+      const video = await this.videoRepository.findOne({
+        where: { id: passthrough },
+      });
       if (video) {
         video.estado = EstadoVideo.ERROR;
         await this.videoRepository.save(video);
         this.videoGateway.notificarVideoActualizado(video);
-        console.error(`❌ [Webhook] Error en Mux al procesar el video [${video.titulo}]`);
+        console.error(
+          `❌ [Webhook] Error en Mux al procesar el video [${video.titulo}]`,
+        );
       }
     }
 
     return { mensaje: 'Webhook de video procesado' };
   }
 
-  async obtenerTodos() {
-    return await this.videoRepository.find({ relations: ['categoria'], order: { orden: 'ASC' } });
+ async obtenerTodos() {
+    const videos = await this.videoRepository.find({
+      relations: ['categoria'],
+      order: { orden: 'ASC' },
+    });
+    return videos.map((video) => ({
+      ...video,
+      duracionFormateada: this.formatearDuracion(video.duracion),
+    }));
   }
 
-  async obtenerPorCategoria(idCategoria: string) {
-    return await this.videoRepository.find({ where: { idCategoria }, order: { orden: 'ASC' } });
+async obtenerPorCategoria(idCategoria: string) {
+    const videos = await this.videoRepository.find({
+      where: { idCategoria },
+      order: { orden: 'ASC' },
+    });
+    return videos.map((video) => ({
+      ...video,
+      duracionFormateada: this.formatearDuracion(video.duracion),
+    }));
   }
 
-  async obtenerPorId(id: string) {
-    const video = await this.videoRepository.findOne({ where: { id }, relations: ['categoria'] });
+ async obtenerPorId(id: string) {
+    const video = await this.videoRepository.findOne({
+      where: { id },
+      relations: ['categoria'],
+    });
     if (!video) throw new NotFoundException(`El video no existe`);
-    return video;
+    return {
+      ...video,
+      duracionFormateada: this.formatearDuracion(video.duracion),
+    };
   }
 
-  async actualizar(id: string, datos: any, archivoMiniatura?: Express.Multer.File) {
-    const video = await this.obtenerPorId(id);
+
+  async actualizar(
+    id: string,
+    datos: UpdateVideoDto,
+    archivoMiniatura?: Express.Multer.File,
+  ) {
+    const videoPuro = await this.videoRepository.findOne({ where: { id } });
+    if (!videoPuro) {
+      throw new NotFoundException(`El video no existe`);
+    }
+    
     if (archivoMiniatura) {
-      if (video.imagenUrl) {
-        const publicId = this.cloudinaryService.extraerPublicId(video.imagenUrl);
+      if (videoPuro.imagenUrl) {
+        const publicId = this.cloudinaryService.extraerPublicId(videoPuro.imagenUrl);
         if (publicId) {
           try {
             await this.cloudinaryService.deleteFile(publicId);
@@ -156,14 +226,18 @@ export class VideoService {
           }
         }
       }
-      const uploadResult = await this.cloudinaryService.uploadFile(archivoMiniatura, 'flex-studio/videos');
-      video.imagenUrl = uploadResult.secure_url;
+      const uploadResult = await this.cloudinaryService.uploadFile(
+        archivoMiniatura,
+        'flex-studio/videos',
+      );
+      videoPuro.imagenUrl = uploadResult.secure_url; 
     }
-    if (datos.titulo) video.titulo = datos.titulo;
-    if (datos.idCategoria) video.idCategoria = datos.idCategoria;
-    if (datos.duracion) video.duracion = parseInt(datos.duracion);
-    if (datos.orden) video.orden = parseInt(datos.orden);
-    return await this.videoRepository.save(video);
+    if (datos.titulo) videoPuro.titulo = datos.titulo;
+    if (datos.descripcion !== undefined) videoPuro.descripcion = datos.descripcion;
+    if (datos.idCategoria) videoPuro.idCategoria = datos.idCategoria;
+    if (datos.duracion) videoPuro.duracion = Number(datos.duracion);
+    if (datos.orden) videoPuro.orden = Number(datos.orden);
+    return await this.videoRepository.save(videoPuro);
   }
 
   async eliminar(id: string) {
@@ -183,11 +257,58 @@ export class VideoService {
           await this.cloudinaryService.deleteFile(publicId);
           console.log(`Imagen miniatura borrada en Cloudinary: ${publicId}`);
         } catch (error) {
-          console.error(`Aviso: No se pudo borrar la imagen de Cloudinary:`, error);
+          console.error(
+            `Aviso: No se pudo borrar la imagen de Cloudinary:`,
+            error,
+          );
         }
       }
     }
     await this.videoRepository.remove(video);
     return { mensaje: 'Video e imagen eliminados con éxito' };
+  }
+
+  async obtenerCredencialesReproduccion(idVideo: string, idUsuario: string) {
+    // 1. Buscamos el video
+    const video = await this.obtenerPorId(idVideo);
+    if (!video || !video.playbackId) {
+      throw new NotFoundException(
+        'El video no está disponible para reproducción.',
+      );
+    }
+
+    // 2. EL AUDITOR: Verificamos que el usuario haya comprado la categoría de este video
+    const compra = await this.compraRepository.findOne({
+      where: {
+        idUsuario: idUsuario,
+        idCategoria: video.idCategoria,
+        estado: EstadoPago.APROBADO,
+      },
+    });
+
+    if (!compra) {
+      throw new ForbiddenException('No tienes permisos para ver este video.');
+    }
+
+    try {
+      const token = await this.muxClient.jwt.signPlaybackId(
+        video.playbackId, 
+        {
+          keyId: process.env.MUX_SIGNING_KEY_ID!, 
+          keySecret: process.env.MUX_SIGNING_KEY_PRIVATE!,
+          expiration: '3h',  
+        }
+      );
+
+      return {
+        playbackId: video.playbackId,
+        token: token,
+      };
+    } catch (error) {
+      console.error('Error firmando token de Mux:', error);
+      throw new InternalServerErrorException(
+        'Error al generar credenciales de video.',
+      );
+    }
   }
 }

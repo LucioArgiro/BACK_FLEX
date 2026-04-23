@@ -196,13 +196,9 @@ export class CompraService {
     return clasesUnicas;
   }
 
-  async obtenerDetalleClaseComprada(idUsuario: string, idCategoria: string) {
+ async obtenerDetalleClaseComprada(idUsuario: string, idCategoria: string) {
     const compra = await this.compraRepository.findOne({
-      where: {
-        idUsuario,
-        idCategoria,
-        estado: EstadoPago.APROBADO
-      },
+      where: { idUsuario, idCategoria, estado: EstadoPago.APROBADO },
       relations: ['categoria', 'categoria.videos'],
     });
 
@@ -210,8 +206,30 @@ export class CompraService {
       throw new ForbiddenException('No tienes acceso a esta clase o no existe.');
     }
 
-    return compra.categoria;
+    const categoriaLimpia = {
+      ...compra.categoria,
+      videos: compra.categoria.videos.map(video => {
+        const minutos = Math.floor((video.duracion || 0) / 60);
+        const segundos = (video.duracion || 0) % 60;
+        const tiempoFormateado = `${minutos}:${segundos.toString().padStart(2, '0')}`;
+
+        return {
+          id: video.id,
+          titulo: video.titulo,
+          descripcion: video.descripcion,  
+          orden: video.orden,
+          duracion: video.duracion,
+          duracionFormateada: tiempoFormateado,  
+          imagenUrl: video.imagenUrl,
+          estado: video.estado,
+ 
+        };
+      })
+    };
+
+    return categoriaLimpia;
   }
+
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async limpiarComprasPendientes() {

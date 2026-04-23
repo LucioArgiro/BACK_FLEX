@@ -1,7 +1,10 @@
-import { Controller, Post, Body, Param, Get, Patch, Delete, UseGuards, UseInterceptors, UploadedFile, Headers } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, Patch, Delete, UseGuards, UseInterceptors, UploadedFile, Headers, Req } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { VideoService } from './video.service';
 import { AdminGuard } from 'src/auth/admin.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'; 
+import { CrearVideoDto } from './dto/crear-video.dto';
+import { UpdateVideoDto } from './dto/update-video.dto';
 
 @Controller('videos')
 export class VideoController {
@@ -11,7 +14,7 @@ export class VideoController {
   @UseGuards(AdminGuard)
   @UseInterceptors(FileInterceptor('imagen'))
   solicitarSubida(
-    @Body() body: any,
+    @Body() body: CrearVideoDto,
     @UploadedFile() file: Express.Multer.File
   ) {
 
@@ -46,7 +49,7 @@ export class VideoController {
   @UseInterceptors(FileInterceptor('imagen'))
   actualizar(
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() body: UpdateVideoDto,
     @UploadedFile() file: Express.Multer.File
   ) {
     return this.videoService.actualizar(id, body, file);
@@ -56,5 +59,13 @@ export class VideoController {
   @UseGuards(AdminGuard)
   eliminar(@Param('id') id: string) {
     return this.videoService.eliminar(id);
+  }
+
+  @Get('reproducir/:idVideo')
+  @UseGuards(JwtAuthGuard) 
+  obtenerParaReproduccion(@Param('idVideo') idVideo: string, @Req() req: any) {
+    const idUsuario = req.user.id;
+ 
+    return this.videoService.obtenerCredencialesReproduccion(idVideo, idUsuario);
   }
 }
