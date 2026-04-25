@@ -25,6 +25,8 @@ export class Categoria {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   precioUsd!: number;
 
+  @Column({ type: 'boolean', default: false })
+  destacada!: boolean;
 
   @Column({ type: 'varchar', nullable: true })  
   assetIdMuestra!: string | null;

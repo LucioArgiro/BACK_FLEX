@@ -8,6 +8,7 @@ import { VerificarOtpDto } from './dto/verificar-otp.dto';
 import { CaptchaService } from './captcha.service';
 import { CambiarContrasenaDto } from './dto/cambiar-contrasena.dto';
 import { SolicitarRecuperacionDto } from './dto/solicitar-recuperacion.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -17,16 +18,19 @@ export class AuthController {
   ) { }
 
   @Post('registro')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   async registrar(@Body() dto: CreateUsuarioDto) {
     return this.authService.registrar(dto);
   }
 
   @Post('verificar-email')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   async verificarEmail(@Body() dto: VerificarOtpDto) {
     return this.authService.verificarEmail(dto.correo, dto.codigo);
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     await this.captchaService.validarToken(dto.captchaToken);
 
@@ -55,12 +59,14 @@ export class AuthController {
   }
 
   @Post('solicitar-recuperacion')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
   async solicitarRecuperacion(@Body() dto: SolicitarRecuperacionDto) {
     await this.captchaService.validarToken(dto.captchaToken);
     return this.authService.solicitarRecuperacion(dto.correo);
   }
 
   @Post('cambiar-contrasena')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async cambiarContrasena(@Body() dto: CambiarContrasenaDto) {
     return this.authService.cambiarContrasena(dto.token, dto.nuevaContrasena);
   }

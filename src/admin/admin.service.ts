@@ -19,7 +19,6 @@ async obtenerEstadisticasGlobales() {
     const totalUsuarios = await this.usuarioRepository.count({
       where: { rol: RolUsuario.CLIENTE }
     });
-
     const estadisticas = await this.compraRepository.createQueryBuilder('compra')
       .where('compra.estado = :estadoAprobado', { estadoAprobado: EstadoPago.APROBADO })
       .select([
@@ -28,8 +27,6 @@ async obtenerEstadisticasGlobales() {
         `SUM(CASE WHEN compra.moneda = 'USD' THEN compra.montoCobrado ELSE 0 END) AS ingresosUsd`
       ])
       .getRawOne();
-
-
    const hoy = new Date();
     const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
     const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -40,25 +37,19 @@ async obtenerEstadisticasGlobales() {
     const comprasAnio = await this.compraRepository.find({
       where: { estado: EstadoPago.APROBADO, fechaCompra: MoreThanOrEqual(inicioAnio) }
     });
-
-    // 👇 Nueva estructura más completa para cada período
     const resumenPeriodos = {
       hoy: { ars: 0, usd: 0, ventasArs: 0, ventasUsd: 0 },
       semana: { ars: 0, usd: 0, ventasArs: 0, ventasUsd: 0 },
       mes: { ars: 0, usd: 0, ventasArs: 0, ventasUsd: 0 },
       anio: { ars: 0, usd: 0, ventasArs: 0, ventasUsd: 0 }
     };
-
     comprasAnio.forEach(compra => {
       const monto = Number(compra.montoCobrado) || 0;
       const fecha = new Date(compra.fechaCompra);
       const esArs = compra.moneda === 'ARS';
       const esUsd = compra.moneda === 'USD';
-
-      // Sumamos al Año (ya que la consulta base trae desde inicio de año)
       if (esArs) { resumenPeriodos.anio.ars += monto; resumenPeriodos.anio.ventasArs++; }
       if (esUsd) { resumenPeriodos.anio.usd += monto; resumenPeriodos.anio.ventasUsd++; }
-
       if (fecha >= inicioMes) {
         if (esArs) { resumenPeriodos.mes.ars += monto; resumenPeriodos.mes.ventasArs++; }
         if (esUsd) { resumenPeriodos.mes.usd += monto; resumenPeriodos.mes.ventasUsd++; }
@@ -78,7 +69,7 @@ async obtenerEstadisticasGlobales() {
       clasesVendidas: Number(estadisticas.clasesVendidas) || 0,
       ingresosArs: Number(estadisticas.ingresosArs) || 0,
       ingresosUsd: Number(estadisticas.ingresosUsd) || 0,
-      resumenPeriodos // 👈 Mandamos la nueva super-estructura
+      resumenPeriodos 
     };
   }
 
@@ -121,6 +112,34 @@ async obtenerEstadisticasGlobales() {
       totalInvertidoArs: Number(row.totalInvertidoArs) || 0,
       totalInvertidoUsd: Number(row.totalInvertidoUsd) || 0,
       fechaUltimaCompra: row.fechaUltimaCompra || null,
+    }));
+  }
+
+  async obtenerClasesMasCompradas(limite: number = 10) {
+    const rawData = await this.compraRepository.createQueryBuilder('compra')
+      .innerJoin('compra.categoria', 'categoria') 
+      .where('compra.estado = :estadoAprobado', { estadoAprobado: EstadoPago.APROBADO })
+      .select([
+        'categoria.id AS id',
+        'categoria.titulo AS titulo',
+        'categoria.imagenTarjeta AS imagenTarjeta',
+        'categoria.destacada AS destacada',
+        'COUNT(compra.id) AS totalCompras',
+        `SUM(CASE WHEN compra.moneda = 'ARS' THEN compra.montoCobrado ELSE 0 END) AS ingresosArs`,
+        `SUM(CASE WHEN compra.moneda = 'USD' THEN compra.montoCobrado ELSE 0 END) AS ingresosUsd`
+      ])
+      .groupBy('categoria.id')
+      .orderBy('totalCompras', 'DESC')
+      .limit(limite)
+      .getRawMany();
+    return rawData.map(row => ({
+      id: row.id,
+      titulo: row.titulo,
+      imagenTarjeta: row.imagenTarjeta || row.imagentarjeta,
+      destacada: row.destacada === 1 || row.destacada === true, 
+      totalCompras: Number(row.totalCompras || row.totalcompras) || 0,
+      ingresosArs: Number(row.ingresosArs || row.ingresosars) || 0,
+      ingresosUsd: Number(row.ingresosUsd || row.ingresosusd) || 0
     }));
   }
 }

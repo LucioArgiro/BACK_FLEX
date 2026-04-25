@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, Res, UseGuards, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, Req, Res, UseGuards, Get, Param, ParseUUIDPipe } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { CompraService } from './services/compra.service';
 import { CrearCompraDto } from './dto/crear-compra.dto';
@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MercadoPagoService } from './services/mercadopago.service'; 
 import { PaypalService } from './services/paypal.service';
 import { CaptchaService } from '../auth/captcha.service';
-
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('compras')
 export class CompraController {
@@ -19,6 +19,7 @@ export class CompraController {
 
 @UseGuards(JwtAuthGuard)
   @Post('iniciar')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })  
   async iniciarCompra(@Req() req, @Body() crearCompraDto: CrearCompraDto) {
     await this.captchaService.validarToken(crearCompraDto.captchaToken);
     const { captchaToken, ...datosCompraLimpios } = crearCompraDto;
@@ -56,7 +57,7 @@ export class CompraController {
 
   @UseGuards(JwtAuthGuard)
   @Get('mis-clases/:id')
-  async obtenerDetalleClase(@Req() req: any, @Param('id') idCategoria: string) {
+  async obtenerDetalleClase(@Req() req: any, @Param('id', ParseUUIDPipe) idCategoria: string) {
     return await this.compraService.obtenerDetalleClaseComprada(req.user.id, idCategoria);
   }
 

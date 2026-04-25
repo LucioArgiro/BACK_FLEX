@@ -1,7 +1,7 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { ComprobanteService } from './ComprobanteService';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // Tu guard de JWT
-import { AdminGuard } from '../auth/admin.guard'; // Tu guard de Admin
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'; 
+import { AdminGuard } from '../auth/admin.guard';  
 
 @Controller('comprobantes')
 @UseGuards(JwtAuthGuard, AdminGuard)  
@@ -10,13 +10,12 @@ export class ComprobanteController {
 
 
   @Get('usuario/:idUsuario')
-  async obtenerPorUsuario(@Param('idUsuario') idUsuario: string) {
+  async obtenerPorUsuario(@Param('idUsuario', ParseUUIDPipe) idUsuario: string) {
     return await this.comprobanteService.buscarPorUsuario(idUsuario);
   }
 
-  // Obtener los detalles de un recibo específico
   @Get(':id')
-  async obtenerUno(@Param('id') id: string) {
+  async obtenerUno(@Param('id', ParseUUIDPipe) id: string) {
     return await this.comprobanteService.buscarPorId(id);
   }
 }

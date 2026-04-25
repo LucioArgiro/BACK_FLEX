@@ -1,37 +1,42 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CaptchaService {
-  private readonly logger = new Logger(CaptchaService.name);
+  constructor(private readonly configService: ConfigService) {}
+  async validarToken(token: string, ip?: string): Promise<boolean> {
+    const secretKey = this.configService.get<string>('RECAPTCHA_SECRET_KEY');
 
-  constructor(private configService: ConfigService) {}
-
-  async validarToken(token: string): Promise<boolean> {
-    if (!token) {
-      throw new BadRequestException('Falta el token de seguridad (Captcha)');
+    if (!secretKey) {
+      console.warn('⚠️ No se encontró RECAPTCHA_SECRET_KEY. Saltando validación en desarrollo.');
+      return true; 
     }
 
-    const secretKey = this.configService.get<string>('RECAPTCHA_SECRET_KEY');
-    
     try {
-      const response = await fetch(
-        `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`,
-        {
-          method: 'POST',
-        }
-      );
+      const params = new URLSearchParams({
+        secret: secretKey,
+        response: token,
+      });
+      if (ip) {
+        params.append('remoteip', ip);
+      }
+      const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params,
+      });
 
       const data = await response.json();
-      if (!data.success || data.score < 0.5) {
-        this.logger.warn(`Intento de registro bloqueado. Score del bot: ${data.score}`);
-        throw new BadRequestException('Actividad sospechosa detectada');
+      if (!data.success || (data.score !== undefined && data.score < 0.5)) {
+        console.error('🚨 Posible Bot detectado o error de reCAPTCHA:', data);
+        throw new UnauthorizedException('No pudimos verificar que seas humano o tu conexión es inusual.');
       }
-
       return true;
     } catch (error) {
-      this.logger.error('Error de comunicación con Google reCAPTCHA', error);
-      throw new BadRequestException('Error al verificar la seguridad de la petición');
+      console.error('Error de red al validar Captcha:', error);
+      throw new UnauthorizedException('Error al verificar la seguridad de la petición.');
     }
   }
 }

@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, Min, IsArray, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, Min, IsArray, MaxLength, IsBoolean } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export class CreateCategoriaDto {
@@ -19,6 +19,15 @@ export class CreateCategoriaDto {
   @IsString()
   @IsOptional()
   descripcionDetallada?: string;
+
+@IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  destacada?: boolean;
 
   @IsOptional()
   @Type(() => Number)

@@ -1,4 +1,4 @@
-import {Controller, Get, Post, Body, Param, Patch, Delete, UseGuards, UploadedFiles, UseInterceptors, BadRequestException} from '@nestjs/common';
+import {Controller, Get, Post, Body, Param, Patch, Delete, UseGuards, UploadedFiles, UseInterceptors, BadRequestException, ParseUUIDPipe} from '@nestjs/common';
 import { CategoriaService } from './categoria.service';
 import { AdminGuard } from 'src/auth/admin.guard';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
@@ -49,7 +49,7 @@ export class CategoriaController {
   }
 
   @Get(':id')
-  obtenerPorId(@Param('id') id: string) {
+  obtenerPorId(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriaService.obtenerPorId(id);
   }
 
@@ -61,7 +61,7 @@ export class CategoriaController {
     { name: 'videoMuestra', maxCount: 1 },
   ], { fileFilter }))
   actualizar(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateCategoriaDto,
     @UploadedFiles() files: ArchivosCategoria
   ) {
@@ -70,7 +70,7 @@ export class CategoriaController {
 
   @Delete(':id')
   @UseGuards(AdminGuard)
-  eliminar(@Param('id') id: string) {
+  eliminar(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriaService.eliminar(id);
   }
 }
