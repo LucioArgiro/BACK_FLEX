@@ -71,10 +71,11 @@ export class CategoriaService {
   }
 
 
-  async obtenerTodas() {
-    return await this.categoriaRepository.find();
+async obtenerTodas() {
+    return await this.categoriaRepository.createQueryBuilder('categoria')
+      .loadRelationCountAndMap('categoria.cantidadVideos', 'categoria.videos')
+      .getMany();
   }
-
   async obtenerPorId(id: string) {
     const categoria = await this.categoriaRepository.findOne({
       where: { id },
