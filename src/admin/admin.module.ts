@@ -4,10 +4,11 @@ import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { Usuario } from '../usuario/entities/usuario.entity';
  import { Compra } from '../compra/entities/compra.entity';
+ import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Usuario, Compra])],
   controllers: [AdminController],
-  providers: [AdminService],
+  providers: [AdminService, CloudinaryService],
 })
 export class AdminModule {}

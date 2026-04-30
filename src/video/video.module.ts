@@ -3,6 +3,7 @@ import { VideoService } from './video.service';
 import { VideoController } from './video.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Video } from './entities/video.entity';
+import { ProgresoVideo } from './entities/progreso-video.entity';
 import { VideoGateway } from './video.gateway';
 import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 import { Categoria } from 'src/categoria/entities/categoria.entity';
@@ -10,7 +11,7 @@ import { Compra } from 'src/compra/entities/compra.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Video, Categoria, Compra]),
+    TypeOrmModule.forFeature([Video, Categoria, Compra, ProgresoVideo]),
     CloudinaryModule
   ],
   controllers: [VideoController],

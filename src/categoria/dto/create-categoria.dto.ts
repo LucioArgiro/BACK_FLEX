@@ -20,7 +20,7 @@ export class CreateCategoriaDto {
   @IsOptional()
   descripcionDetallada?: string;
 
-@IsOptional()
+  @IsOptional()
   @IsBoolean()
   @Transform(({ value }) => {
     if (value === 'true') return true;
@@ -55,8 +55,16 @@ export class CreateCategoriaDto {
   })
   @IsArray({ message: 'Los beneficios deben ser un arreglo de objetos' })
   beneficios?: { titulo: string; descripcion: string; icono?: string }[];
-  
+
   @IsOptional()
   @IsString()
   necesitaVideoMuestra?: string;
+
+  @IsOptional()
+  @IsString()
+  imagenHeroUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  imagenTarjetaUrl?: string;
 }

@@ -18,4 +18,8 @@ export class CrearVideoDto {
 
   @IsOptional()
   orden?: string | number;
+
+  @IsString()
+  @IsOptional()
+  imagenUrl?: string;
 }

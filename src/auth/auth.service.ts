@@ -8,7 +8,6 @@ import { CreateUsuarioDto } from 'src/usuario/dto/create-usuario.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { CaptchaService } from './captcha.service';
-import { v4 as uuidv4 } from 'uuid'
 
 @Injectable()
 export class AuthService {

@@ -1,12 +1,8 @@
-import {
-  Injectable,
-  NotFoundException,
-  InternalServerErrorException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, ForbiddenException, } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Video, EstadoVideo } from './entities/video.entity';
+import { ProgresoVideo } from './entities/progreso-video.entity';
 import { VideoGateway } from './video.gateway';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { Categoria } from '../categoria/entities/categoria.entity';
@@ -26,6 +22,8 @@ export class VideoService {
     private readonly videoGateway: VideoGateway,
     @InjectRepository(Compra)
     private readonly compraRepository: Repository<Compra>,
+    @InjectRepository(ProgresoVideo)
+    private progresoRepository: Repository<ProgresoVideo>,
     private readonly cloudinaryService: CloudinaryService,
   ) {
     this.muxClient = new Mux({
@@ -43,7 +41,10 @@ export class VideoService {
           'flex-studio/videos',
         );
         urlImagen = resultadoCloudinary.secure_url;
+      } else if (datos.imagenUrl) {
+        urlImagen = datos.imagenUrl;
       }
+
       const nuevoVideo = this.videoRepository.create({
         titulo: datos.titulo,
         descripcion: datos.descripcion,
@@ -51,7 +52,7 @@ export class VideoService {
         duracion: parseInt(datos.duracion) || 0,
         orden: parseInt(datos.orden) || 1,
         estado: EstadoVideo.PROCESANDO,
-        imagenUrl: urlImagen,
+        imagenUrl: urlImagen,  
       });
 
       const videoGuardado = await this.videoRepository.save(nuevoVideo);
@@ -148,7 +149,7 @@ export class VideoService {
         video.estado = EstadoVideo.LISTO;
         await this.videoRepository.save(video);
         this.videoGateway.notificarVideoActualizado(video);
-        console.log(`✅ [Webhook] Video [${video.titulo}] procesado y LISTO`);
+        console.log(`[Webhook] Video [${video.titulo}] procesado y LISTO`);
       }
     }
 
@@ -160,8 +161,7 @@ export class VideoService {
         video.estado = EstadoVideo.ERROR;
         await this.videoRepository.save(video);
         this.videoGateway.notificarVideoActualizado(video);
-        console.error(
-          `❌ [Webhook] Error en Mux al procesar el video [${video.titulo}]`,
+        console.error(`[Webhook] Error en Mux al procesar el video [${video.titulo}]`,
         );
       }
     }
@@ -169,7 +169,7 @@ export class VideoService {
     return { mensaje: 'Webhook de video procesado' };
   }
 
- async obtenerTodos() {
+  async obtenerTodos() {
     const videos = await this.videoRepository.find({
       relations: ['categoria'],
       order: { orden: 'ASC' },
@@ -180,7 +180,7 @@ export class VideoService {
     }));
   }
 
-async obtenerPorCategoria(idCategoria: string) {
+  async obtenerPorCategoria(idCategoria: string) {
     const videos = await this.videoRepository.find({
       where: { idCategoria },
       order: { orden: 'ASC' },
@@ -191,7 +191,7 @@ async obtenerPorCategoria(idCategoria: string) {
     }));
   }
 
- async obtenerPorId(id: string) {
+  async obtenerPorId(id: string) {
     const video = await this.videoRepository.findOne({
       where: { id },
       relations: ['categoria'],
@@ -204,7 +204,7 @@ async obtenerPorCategoria(idCategoria: string) {
   }
 
 
-  async actualizar(
+ async actualizar(
     id: string,
     datos: UpdateVideoDto,
     archivoMiniatura?: Express.Multer.File,
@@ -213,7 +213,6 @@ async obtenerPorCategoria(idCategoria: string) {
     if (!videoPuro) {
       throw new NotFoundException(`El video no existe`);
     }
-    
     if (archivoMiniatura) {
       if (videoPuro.imagenUrl) {
         const publicId = this.cloudinaryService.extraerPublicId(videoPuro.imagenUrl);
@@ -230,13 +229,17 @@ async obtenerPorCategoria(idCategoria: string) {
         archivoMiniatura,
         'flex-studio/videos',
       );
-      videoPuro.imagenUrl = uploadResult.secure_url; 
+      videoPuro.imagenUrl = uploadResult.secure_url;
+      
+    } else if (datos.imagenUrl) {
+      videoPuro.imagenUrl = datos.imagenUrl;
     }
     if (datos.titulo) videoPuro.titulo = datos.titulo;
     if (datos.descripcion !== undefined) videoPuro.descripcion = datos.descripcion;
     if (datos.idCategoria) videoPuro.idCategoria = datos.idCategoria;
     if (datos.duracion) videoPuro.duracion = Number(datos.duracion);
     if (datos.orden) videoPuro.orden = Number(datos.orden);
+    
     return await this.videoRepository.save(videoPuro);
   }
 
@@ -292,11 +295,11 @@ async obtenerPorCategoria(idCategoria: string) {
 
     try {
       const token = await this.muxClient.jwt.signPlaybackId(
-        video.playbackId, 
+        video.playbackId,
         {
-          keyId: process.env.MUX_SIGNING_KEY_ID!, 
+          keyId: process.env.MUX_SIGNING_KEY_ID!,
           keySecret: process.env.MUX_SIGNING_KEY_PRIVATE!,
-          expiration: '3h',  
+          expiration: '3h',
         }
       );
 
@@ -310,5 +313,31 @@ async obtenerPorCategoria(idCategoria: string) {
         'Error al generar credenciales de video.',
       );
     }
+  }
+
+  async marcarComoCompletado(usuarioId: string, videoId: string) {
+    const existe = await this.progresoRepository.findOne({
+      where: { usuario: { id: usuarioId }, video: { id: videoId } }
+    });
+
+    if (!existe) {
+      const nuevoProgreso = this.progresoRepository.create({
+        usuario: { id: usuarioId },
+        video: { id: videoId }
+      });
+      await this.progresoRepository.save(nuevoProgreso);
+    }
+    return { success: true, message: 'Video marcado como completado' };
+  }
+
+  async obtenerProgresoClase(usuarioId: string, idCategoria: string) {
+    const progresos = await this.progresoRepository.find({
+      where: { 
+        usuario: { id: usuarioId }, 
+        video: { idCategoria: idCategoria } 
+      },
+      relations: ['video']
+    });
+    return progresos.map(p => p.video.id); 
   }
 }

@@ -73,47 +73,64 @@ async obtenerEstadisticasGlobales() {
     };
   }
 
+// back/src/admin/admin.service.ts
 
-  async obtenerHistorialClientes(): Promise<ResumenClienteDto[]> {
-    const resultados = await this.usuarioRepository.createQueryBuilder('usuario')
-      .leftJoin(
-        'usuario.compras', 
-        'compra', 
-        'compra.estado = :estadoAprobado', 
-        { estadoAprobado: EstadoPago.APROBADO }
-      )
-      .where('usuario.rol = :rolCliente', { rolCliente: RolUsuario.CLIENTE })
-      .select([
-        'usuario.id AS id',
-        'usuario.nombre AS nombre',
-        'usuario.apellido AS apellido',
-        'usuario.correo AS correo',
-        'usuario.pais AS pais',
-        'usuario.telefono AS telefono',
-        'usuario.fechaCreacion AS fechaRegistro'
-      ])
-      .addSelect('COUNT(compra.id)', 'totalClasesCompradas')
-      .addSelect(`SUM(CASE WHEN compra.moneda = 'ARS' THEN compra.montoCobrado ELSE 0 END)`, 'totalInvertidoArs')
-      .addSelect(`SUM(CASE WHEN compra.moneda = 'USD' THEN compra.montoCobrado ELSE 0 END)`, 'totalInvertidoUsd')
-      .addSelect('MAX(compra.fechaCompra)', 'fechaUltimaCompra')
-      .groupBy('usuario.id')
-      .orderBy('fechaUltimaCompra', 'DESC') 
-      .getRawMany();
+async obtenerHistorialClientes(page: number = 1, limit: number = 5) {
+  const skip = (page - 1) * limit;
+  const queryBuilder = this.usuarioRepository.createQueryBuilder('usuario')
+    .leftJoin(
+      'usuario.compras', 
+      'compra', 
+      'compra.estado = :estadoAprobado', 
+      { estadoAprobado: EstadoPago.APROBADO }
+    )
+    .where('usuario.rol = :rolCliente', { rolCliente: RolUsuario.CLIENTE })
+    .select([
+      'usuario.id AS id',
+      'usuario.nombre AS nombre',
+      'usuario.apellido AS apellido',
+      'usuario.correo AS correo',
+      'usuario.pais AS pais',
+      'usuario.telefono AS telefono',
+      'usuario.fechaCreacion AS fechaRegistro'
+    ])
+    .addSelect('COUNT(compra.id)', 'totalClasesCompradas')
+    .addSelect(`SUM(CASE WHEN compra.moneda = 'ARS' THEN compra.montoCobrado ELSE 0 END)`, 'totalInvertidoArs')
+    .addSelect(`SUM(CASE WHEN compra.moneda = 'USD' THEN compra.montoCobrado ELSE 0 END)`, 'totalInvertidoUsd')
+    .addSelect('MAX(compra.fechaCompra)', 'fechaUltimaCompra')
+    .groupBy('usuario.id')
+    .orderBy('fechaUltimaCompra', 'DESC')
+    .offset(skip)
+    .limit(limit);
 
-
-    return resultados.map(row => ({
-      id: row.id,
-      nombreCompleto: `${row.nombre} ${row.apellido}`.trim(),
-      correo: row.correo,
-      pais: row.pais || 'No especificado',
-      telefono: row.telefono,
-      fechaRegistro: row.fechaRegistro,
-      totalClasesCompradas: Number(row.totalClasesCompradas) || 0,
-      totalInvertidoArs: Number(row.totalInvertidoArs) || 0,
-      totalInvertidoUsd: Number(row.totalInvertidoUsd) || 0,
-      fechaUltimaCompra: row.fechaUltimaCompra || null,
-    }));
-  }
+  const resultados = await queryBuilder.getRawMany();
+  const totalItems = await this.usuarioRepository.count({
+    where: { rol: RolUsuario.CLIENTE }
+  });
+  const totalPages = Math.ceil(totalItems / limit);
+  const data = resultados.map(row => ({
+    id: row.id,
+    nombreCompleto: `${row.nombre} ${row.apellido}`.trim(),
+    correo: row.correo,
+    pais: row.pais || 'No especificado',
+    telefono: row.telefono,
+    fechaRegistro: row.fechaRegistro,
+    totalClasesCompradas: Number(row.totalClasesCompradas) || 0,
+    totalInvertidoArs: Number(row.totalInvertidoArs) || 0,
+    totalInvertidoUsd: Number(row.totalInvertidoUsd) || 0,
+    fechaUltimaCompra: row.fechaUltimaCompra || null,
+  }));
+  return {
+    data,
+    meta: {
+      totalItems,
+      itemCount: data.length,
+      itemsPerPage: limit,
+      totalPages,
+      currentPage: page,
+    }
+  };
+}
 
   async obtenerClasesMasCompradas(limite: number = 10) {
     const rawData = await this.compraRepository.createQueryBuilder('compra')
