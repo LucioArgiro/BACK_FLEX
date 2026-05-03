@@ -11,7 +11,7 @@ export class PdfService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      const imageUrl = 'https://res.cloudinary.com/dmp7mcwie/image/upload/v1774488885/Logo_hfou8a.png';
+      const imageUrl = 'https://res.cloudinary.com/dmp7mcwie/image/upload/v1774490155/logofooter_u3j6cz.png';
       const response = await fetch(imageUrl);
 
       if (response.ok) {
