@@ -14,9 +14,6 @@ export class CrearVideoDto {
   idCategoria!: string;
 
   @IsOptional()
-  duracion?: string | number;
-
-  @IsOptional()
   orden?: string | number;
 
   @IsString()

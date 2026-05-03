@@ -1,86 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
+
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenido a Flex Studio</title>
     <style>
+        body,
+        table,
+        td,
+        a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table,
+        td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+        }
+
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #0a0a0a;
-            color: #ffffff;
             margin: 0;
             padding: 0;
-        }
-        .container {
-            max-width: 600px;
-            margin: 40px auto;
-            background-color: #131313;
-            border-radius: 20px;
-            border: 1px solid #333;
-            overflow: hidden;
-        }
-        .header {
-            background-color: #131313;
-            padding: 30px;
-            text-align: center;
-            border-bottom: 2px solid #d7f250;
-        }
-        .header img {
-            max-width: 200px;
-        }
-        .content {
-            padding: 40px 30px;
-            text-align: center;
-        }
-        h1 {
-            color: #d7f250;
-            font-size: 28px;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-        p {
-            color: #cccccc;
-            font-size: 16px;
-            line-height: 1.6;
-            margin-bottom: 30px;
-        }
-        .btn {
-            display: inline-block;
-            background-color: #d7f250;
-            color: #131313;
-            padding: 15px 30px;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 16px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .footer {
+            width: 100% !important;
             background-color: #0a0a0a;
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <img src="https://res.cloudinary.com/dmp7mcwie/image/upload/v1774488885/Logo_hfou8a.png" alt="Flex Studio Logo">
-        </div>
-        <div class="content">
-            <h1>¡Hola, {{nombre}}!</h1>
-            <p>Bienvenido/a a Flex Studio. Estamos felices de que te sumes a nuestra comunidad. Prepárate para llevar tu entrenamiento al siguiente nivel.</p>
-            <p>Ya puedes acceder a tu panel para completar tu perfil y ver las clases disponibles.</p>
-            
-            <a href="http://localhost:5173/login" class="btn">Ir a mi cuenta</a>
-        </div>
-        <div class="footer">
-            <p>© 2026 Flex Studio - Candelaria Imbaud. Todos los derechos reservados.</p>
-        </div>
-    </div>
+
+<body
+    style="background-color: #0a0a0a; margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0a0a0a;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0"
+                    style="background-color: #131313; border-radius: 24px; overflow: hidden; border: 1px solid #222222; max-width: 600px; margin: auto;">
+                    <tr>
+                        <td height="6" style="background-color: #d7f250;"></td>
+                    </tr>
+                    <tr>
+                        <td align="center" style="padding: 40px 0 20px 0;">
+                            <img src="https://res.cloudinary.com/dmp7mcwie/image/upload/v1774488885/Logo_hfou8a.png"
+                                alt="Flex Studio" width="160" style="display: block; max-width: 160px;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="center" style="padding: 0 40px;">
+                            <p
+                                style="color: #d7f250; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin: 0 0 10px 0;">
+                                Nueva Cuenta Creada</p>
+                            <h1
+                                style="color: #ffffff; font-size: 32px; font-weight: 900; margin: 0 0 5px 0; letter-spacing: -1px; text-transform: uppercase;">
+                                ¡HOLA, {{nombre}}!
+                            </h1>
+                            <div style="height: 3px; width: 40px; background-color: #d7f250; margin: 20px auto;"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="center" style="padding: 10px 40px 40px 40px;">
+                            <p style="color: #cccccc; font-size: 16px; line-height: 26px; margin: 0 0 20px 0;">
+                                Acabas de dar el primer paso para desafiar tus límites. En <strong>Flex Studio</strong>
+                                no solo entrenamos, transformamos cuerpos y mentes.
+                            </p>
+                            <p style="color: #a0a0a0; font-size: 15px; line-height: 24px; margin: 0 0 35px 0;">
+                                Tu cuenta ya está lista. Accede ahora a tu panel personal, completa tu perfil y descubre
+                                todas las disciplinas que tenemos para ti.
+                            </p>
+                            <table border="0" cellspacing="0" cellpadding="0" style="margin: auto;">
+                                <tr>
+                                    <td align="center" style="border-radius: 50px; background-color: #d7f250;">
+                                        <a href="http://localhost:5173/login" target="_blank"
+                                            style="font-size: 15px; font-family: Helvetica, Arial, sans-serif; color: #131313; text-decoration: none; border-radius: 50px; padding: 18px 40px; border: 1px solid #d7f250; display: inline-block; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">
+                                            EMPEZAR AHORA
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+
+                    <!-- Separador -->
+                    <tr>
+                        <td style="padding: 0 40px;">
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td height="1" style="background-color: #222222;"></td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer Redes Sociales -->
+                    <tr>
+                        <td align="center" style="padding: 30px 40px;">
+                            <p
+                                style="color: #666666; font-size: 12px; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">
+                                Únete a la comunidad</p>
+                            <a href="https://instagram.com/flex_studioc" target="_blank"
+                                style="color: #d7f250; font-size: 12px; font-weight: bold; text-decoration: none; margin: 0 10px;">INSTAGRAM</a>
+                            <span style="color: #444;">|</span>
+                            <a href="https://www.tiktok.com/@flexstudioc?_t=ZM-8xQeZpOUQ3c&_r=1&fbclid=PAZXh0bgNhZW0CMTEAc3J0YwZhcHBfaWQMMjU2MjgxMDQwNTU4AAGnn52UOWCv_RZIzoPJ5lpjY1-HE565wQnrS9gWcvwhaVJ0GJvvZLkqzq90gac_aem_9KRbLQ8q9Cr1Gno9nK8vNQ" target="_blank" style="color: #d7f250; font-size: 12px; font-weight: bold; text-decoration: none; margin: 0 10px;">TIKTOK</a>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Copyright -->
+                <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0" style="margin: auto;">
+                    <tr>
+                        <td align="center" style="padding: 20px 0;">
+                            <p style="color: #555555; font-size: 11px; margin: 0;">
+                                © 2026 Flex Studio - Candelaria Imbaud.<br>Todos los derechos reservados.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
 </body>
+
 </html>

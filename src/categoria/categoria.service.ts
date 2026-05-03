@@ -70,15 +70,40 @@ export class CategoriaService {
     };
   }
 
-
-async obtenerTodas() {
-    return await this.categoriaRepository.createQueryBuilder('categoria')
-      .loadRelationCountAndMap('categoria.cantidadVideos', 'categoria.videos')
-      .getMany();
+  private formatearDuracionTotal(segundosTotales: number): string {
+    if (!segundosTotales || segundosTotales === 0) return '0m';
+    const horas = Math.floor(segundosTotales / 3600);
+    const minutos = Math.floor((segundosTotales % 3600) / 60);
+    if (horas > 0) {
+      return `${horas}h ${minutos.toString().padStart(2, '0')}m`;
+    }
+    return `${minutos}m`;
   }
-  async obtenerPorId(id: string) {
+
+// 👇 MÉTODO ACTUALIZADO
+  async obtenerTodas() {
+    const categorias = await this.categoriaRepository.find({
+      relations: ['videos'],
+    });
+    return categorias.map((categoria) => {
+      const cantidadVideos = categoria.videos?.length || 0;
+      const segundosTotales = categoria.videos?.reduce((total, video) => {
+        return total + (video.duracion || 0);
+      }, 0) || 0;
+      const { videos, ...categoriaSinVideos } = categoria;
+      return {
+        ...categoriaSinVideos,
+        cantidadVideos,
+        duracionTotalFormateada: this.formatearDuracionTotal(segundosTotales),
+      };
+    });
+  }
+
+
+ async obtenerPorId(id: string) {
     const categoria = await this.categoriaRepository.findOne({
       where: { id },
+      relations: ['videos'], 
     });
 
     if (!categoria) {
@@ -87,6 +112,27 @@ async obtenerTodas() {
     return categoria;
   }
 
+  // 2. MÉTODO PÚBLICO: Devuelve la categoría formateada para el frontend
+  async obtenerDetallePublico(id: string) {
+    const categoria = await this.obtenerPorId(id);
+
+    // Hacemos los cálculos
+    const cantidadVideos = categoria.videos?.length || 0;
+    const segundosTotales = categoria.videos?.reduce((total, video) => {
+      return total + (video.duracion || 0);
+    }, 0) || 0;
+
+    // Quitamos los videos
+    const { videos, ...categoriaSinVideos } = categoria;
+
+    return {
+      ...categoriaSinVideos,
+      cantidadVideos,
+      duracionTotalFormateada: this.formatearDuracionTotal(segundosTotales),
+    };
+  }
+
+  
 
 async actualizar(id: string, datos: UpdateCategoriaDto & { eliminarImagenHero?: string, eliminarImagenTarjeta?: string, imagenHeroUrl?: string, imagenTarjetaUrl?: string, necesitaVideoMuestra?: string }, files?: ArchivosCategoria) {
     const categoria = await this.obtenerPorId(id);

@@ -14,7 +14,7 @@ const styles = StyleSheet.create({
   receiptBox: {
     border: '1pt solid #000',
     flexDirection: 'row',
-    height: 320, // Altura fija para imitar el bloque del ejemplo
+    height: 320, 
   },
   sidebar: {
     width: 40,
@@ -23,7 +23,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sidebarText: {
-    transform: 'rotate(-90deg)', // Texto vertical
+    width: 300,         
+    textAlign: 'center', 
+    transform: 'rotate(-90deg)', 
     fontSize: 12,
     letterSpacing: 2,
     color: '#000',

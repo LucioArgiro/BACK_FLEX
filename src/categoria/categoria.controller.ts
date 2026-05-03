@@ -53,6 +53,11 @@ export class CategoriaController {
     return this.categoriaService.obtenerPorId(id);
   }
 
+  @Get(':id')
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.categoriaService.obtenerDetallePublico(id);
+  }
+
   @Patch(':id')
   @UseGuards(AdminGuard)
   @UseInterceptors(FileFieldsInterceptor([

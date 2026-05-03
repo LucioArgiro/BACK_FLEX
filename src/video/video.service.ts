@@ -49,7 +49,7 @@ export class VideoService {
         titulo: datos.titulo,
         descripcion: datos.descripcion,
         idCategoria: datos.idCategoria,
-        duracion: parseInt(datos.duracion) || 0,
+        duracion: 0, // <-- Nace en 0, Mux lo llenará después
         orden: parseInt(datos.orden) || 1,
         estado: EstadoVideo.PROCESANDO,
         imagenUrl: urlImagen,  
@@ -74,13 +74,6 @@ export class VideoService {
         'No se pudo generar el enlace de subida',
       );
     }
-  }
-
-  private formatearDuracion(segundosTotales: number): string {
-    if (!segundosTotales || segundosTotales === 0) return '0:00';
-    const minutos = Math.floor(segundosTotales / 60);
-    const segundos = segundosTotales % 60;
-    return `${minutos}:${segundos.toString().padStart(2, '0')}`;
   }
 
   async procesarWebhookMux(body: any, headers: any) {
@@ -147,9 +140,15 @@ export class VideoService {
         video.assetId = asset.id;
         video.playbackId = asset.playback_ids[0].id;
         video.estado = EstadoVideo.LISTO;
+        
+        // 👇 MAGIA: Mux nos da la duración exacta, la guardamos redondeada a segundos
+        if (asset.duration) {
+          video.duracion = Math.round(asset.duration);
+        }
+
         await this.videoRepository.save(video);
         this.videoGateway.notificarVideoActualizado(video);
-        console.log(`[Webhook] Video [${video.titulo}] procesado y LISTO`);
+        console.log(`✅ [Webhook] Video [${video.titulo}] procesado y LISTO. Duración real: ${video.duracion}s`);
       }
     }
 
@@ -161,7 +160,7 @@ export class VideoService {
         video.estado = EstadoVideo.ERROR;
         await this.videoRepository.save(video);
         this.videoGateway.notificarVideoActualizado(video);
-        console.error(`[Webhook] Error en Mux al procesar el video [${video.titulo}]`,
+        console.error(`❌ [Webhook] Error en Mux al procesar el video [${video.titulo}]`,
         );
       }
     }
@@ -170,25 +169,17 @@ export class VideoService {
   }
 
   async obtenerTodos() {
-    const videos = await this.videoRepository.find({
+    return await this.videoRepository.find({
       relations: ['categoria'],
       order: { orden: 'ASC' },
     });
-    return videos.map((video) => ({
-      ...video,
-      duracionFormateada: this.formatearDuracion(video.duracion),
-    }));
   }
 
   async obtenerPorCategoria(idCategoria: string) {
-    const videos = await this.videoRepository.find({
+    return await this.videoRepository.find({
       where: { idCategoria },
       order: { orden: 'ASC' },
     });
-    return videos.map((video) => ({
-      ...video,
-      duracionFormateada: this.formatearDuracion(video.duracion),
-    }));
   }
 
   async obtenerPorId(id: string) {
@@ -197,14 +188,10 @@ export class VideoService {
       relations: ['categoria'],
     });
     if (!video) throw new NotFoundException(`El video no existe`);
-    return {
-      ...video,
-      duracionFormateada: this.formatearDuracion(video.duracion),
-    };
+    return video;
   }
 
-
- async actualizar(
+  async actualizar(
     id: string,
     datos: UpdateVideoDto,
     archivoMiniatura?: Express.Multer.File,
@@ -237,8 +224,8 @@ export class VideoService {
     if (datos.titulo) videoPuro.titulo = datos.titulo;
     if (datos.descripcion !== undefined) videoPuro.descripcion = datos.descripcion;
     if (datos.idCategoria) videoPuro.idCategoria = datos.idCategoria;
-    if (datos.duracion) videoPuro.duracion = Number(datos.duracion);
     if (datos.orden) videoPuro.orden = Number(datos.orden);
+    // Nota: Eliminamos la actualización manual de la duración. 
     
     return await this.videoRepository.save(videoPuro);
   }
@@ -272,15 +259,12 @@ export class VideoService {
   }
 
   async obtenerCredencialesReproduccion(idVideo: string, idUsuario: string) {
-    // 1. Buscamos el video
     const video = await this.obtenerPorId(idVideo);
     if (!video || !video.playbackId) {
       throw new NotFoundException(
         'El video no está disponible para reproducción.',
       );
     }
-
-    // 2. EL AUDITOR: Verificamos que el usuario haya comprado la categoría de este video
     const compra = await this.compraRepository.findOne({
       where: {
         idUsuario: idUsuario,
@@ -288,11 +272,9 @@ export class VideoService {
         estado: EstadoPago.APROBADO,
       },
     });
-
     if (!compra) {
       throw new ForbiddenException('No tienes permisos para ver este video.');
     }
-
     try {
       const token = await this.muxClient.jwt.signPlaybackId(
         video.playbackId,
@@ -314,12 +296,11 @@ export class VideoService {
       );
     }
   }
-
+  
   async marcarComoCompletado(usuarioId: string, videoId: string) {
     const existe = await this.progresoRepository.findOne({
       where: { usuario: { id: usuarioId }, video: { id: videoId } }
     });
-
     if (!existe) {
       const nuevoProgreso = this.progresoRepository.create({
         usuario: { id: usuarioId },
@@ -329,7 +310,7 @@ export class VideoService {
     }
     return { success: true, message: 'Video marcado como completado' };
   }
-
+  
   async obtenerProgresoClase(usuarioId: string, idCategoria: string) {
     const progresos = await this.progresoRepository.find({
       where: { 
