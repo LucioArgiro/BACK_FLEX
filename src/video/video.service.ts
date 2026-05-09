@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException, ForbiddenException, } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Video, EstadoVideo } from './entities/video.entity';
@@ -13,6 +13,7 @@ import { UpdateVideoDto } from './dto/update-video.dto';
 @Injectable()
 export class VideoService {
   private muxClient: Mux;
+  private readonly logger = new Logger(VideoService.name);
 
   constructor(
     @InjectRepository(Video)
@@ -49,10 +50,10 @@ export class VideoService {
         titulo: datos.titulo,
         descripcion: datos.descripcion,
         idCategoria: datos.idCategoria,
-        duracion: 0, // <-- Nace en 0, Mux lo llenará después
+        duracion: 0,
         orden: parseInt(datos.orden) || 1,
         estado: EstadoVideo.PROCESANDO,
-        imagenUrl: urlImagen,  
+        imagenUrl: urlImagen,
       });
 
       const videoGuardado = await this.videoRepository.save(nuevoVideo);
@@ -75,14 +76,13 @@ export class VideoService {
       );
     }
   }
-
   async procesarWebhookMux(body: any, headers: any) {
     const entorno = process.env.NODE_ENV || 'development';
     if (entorno === 'production') {
       const webhookSecret = process.env.MUX_WEBHOOK_SECRET;
       if (!webhookSecret) {
         console.error(
-          '🚨 [Webhook Mux] Falta el secreto del webhook en el .env',
+          '[Webhook Mux] Falta el secreto del webhook en el .env',
         );
         throw new ForbiddenException('Petición denegada');
       }
@@ -96,24 +96,21 @@ export class VideoService {
         );
       } catch (error) {
         console.error(
-          '🚨 [Webhook Mux] INTENTO DE HACKEO: Firma de Mux inválida.',
+          '[Webhook Mux] INTENTO DE HACKEO: Firma de Mux inválida.',
           error,
         );
         throw new ForbiddenException('Firma de seguridad inválida');
       }
     } else {
       console.warn(
-        '⚠️ Webhook de Mux recibido en modo desarrollo. Saltando validación de firma...',
+        'Webhook de Mux recibido en modo desarrollo. Saltando validación de firma...',
       );
     }
     const evento = typeof body === 'string' ? JSON.parse(body) : body;
-
     const tipo = evento.type;
     const asset = evento?.data;
     const passthrough = asset?.passthrough;
-
     if (!passthrough) return { mensaje: 'Ignorado: No tiene passthrough' };
-
     if (passthrough.startsWith('categoria_')) {
       const categoriaId = passthrough.replace('categoria_', '');
       if (tipo === 'video.asset.ready') {
@@ -122,11 +119,11 @@ export class VideoService {
           assetIdMuestra: asset.id,
         });
         console.log(
-          `✅ [Webhook] Video de muestra para Categoría [${categoriaId}] procesado y LISTO`,
+          `[Webhook] Video de muestra para Categoría [${categoriaId}] procesado y LISTO`,
         );
       } else if (tipo === 'video.asset.errored') {
         console.error(
-          `❌ [Webhook] Mux falló al procesar el video de muestra de la Categoría [${categoriaId}]`,
+          `[Webhook] Mux falló al procesar el video de muestra de la Categoría [${categoriaId}]`,
         );
       }
       return { mensaje: 'Webhook de categoría procesado' };
@@ -140,15 +137,13 @@ export class VideoService {
         video.assetId = asset.id;
         video.playbackId = asset.playback_ids[0].id;
         video.estado = EstadoVideo.LISTO;
-        
-        // 👇 MAGIA: Mux nos da la duración exacta, la guardamos redondeada a segundos
         if (asset.duration) {
           video.duracion = Math.round(asset.duration);
         }
 
         await this.videoRepository.save(video);
         this.videoGateway.notificarVideoActualizado(video);
-        console.log(`✅ [Webhook] Video [${video.titulo}] procesado y LISTO. Duración real: ${video.duracion}s`);
+        console.log(`[Webhook] Video [${video.titulo}] procesado y LISTO. Duración real: ${video.duracion}s`);
       }
     }
 
@@ -217,7 +212,6 @@ export class VideoService {
         'flex-studio/videos',
       );
       videoPuro.imagenUrl = uploadResult.secure_url;
-      
     } else if (datos.imagenUrl) {
       videoPuro.imagenUrl = datos.imagenUrl;
     }
@@ -225,8 +219,6 @@ export class VideoService {
     if (datos.descripcion !== undefined) videoPuro.descripcion = datos.descripcion;
     if (datos.idCategoria) videoPuro.idCategoria = datos.idCategoria;
     if (datos.orden) videoPuro.orden = Number(datos.orden);
-    // Nota: Eliminamos la actualización manual de la duración. 
-    
     return await this.videoRepository.save(videoPuro);
   }
 
@@ -261,9 +253,12 @@ export class VideoService {
   async obtenerCredencialesReproduccion(idVideo: string, idUsuario: string) {
     const video = await this.obtenerPorId(idVideo);
     if (!video || !video.playbackId) {
-      throw new NotFoundException(
-        'El video no está disponible para reproducción.',
-      );
+      throw new NotFoundException('El video no está disponible para reproducción.');
+    }
+
+    if (!video.idCategoria) {
+      this.logger.error(`CRÍTICO: El video ${idVideo} no tiene una categoría asignada en la DB.`);
+      throw new InternalServerErrorException('Error de integridad de datos en el video.');
     }
     const compra = await this.compraRepository.findOne({
       where: {
@@ -272,16 +267,26 @@ export class VideoService {
         estado: EstadoPago.APROBADO,
       },
     });
+
     if (!compra) {
-      throw new ForbiddenException('No tienes permisos para ver este video.');
+      this.logger.warn(`🚨 Intento de acceso denegado: Usuario [${idUsuario}] intentó ver Video [${idVideo}] sin compra válida.`);
+      throw new ForbiddenException('No tienes permisos para ver este video o tu suscripción ha expirado.');
     }
+    const keyId = process.env.MUX_SIGNING_KEY_ID;
+    const keyPrivate = process.env.MUX_SIGNING_KEY_PRIVATE;
+
+    if (!keyId || !keyPrivate) {
+      this.logger.error('CRÍTICO: Faltan las llaves de firmado de Mux (MUX_SIGNING_KEY_ID o MUX_SIGNING_KEY_PRIVATE).');
+      throw new InternalServerErrorException('Error de configuración en el servidor de video.');
+    }
+
     try {
       const token = await this.muxClient.jwt.signPlaybackId(
         video.playbackId,
         {
-          keyId: process.env.MUX_SIGNING_KEY_ID!,
-          keySecret: process.env.MUX_SIGNING_KEY_PRIVATE!,
-          expiration: '3h',
+          keyId: keyId,
+          keySecret: keyPrivate,
+          expiration: '3h',  
         }
       );
 
@@ -290,13 +295,11 @@ export class VideoService {
         token: token,
       };
     } catch (error) {
-      console.error('Error firmando token de Mux:', error);
-      throw new InternalServerErrorException(
-        'Error al generar credenciales de video.',
-      );
+      this.logger.error(`Error firmando token de Mux para video ${idVideo}:`, error);
+      throw new InternalServerErrorException('Error al generar credenciales de video seguras.');
     }
   }
-  
+
   async marcarComoCompletado(usuarioId: string, videoId: string) {
     const existe = await this.progresoRepository.findOne({
       where: { usuario: { id: usuarioId }, video: { id: videoId } }
@@ -310,15 +313,15 @@ export class VideoService {
     }
     return { success: true, message: 'Video marcado como completado' };
   }
-  
+
   async obtenerProgresoClase(usuarioId: string, idCategoria: string) {
     const progresos = await this.progresoRepository.find({
-      where: { 
-        usuario: { id: usuarioId }, 
-        video: { idCategoria: idCategoria } 
+      where: {
+        usuario: { id: usuarioId },
+        video: { idCategoria: idCategoria }
       },
       relations: ['video']
     });
-    return progresos.map(p => p.video.id); 
+    return progresos.map(p => p.video.id);
   }
 }

@@ -80,7 +80,7 @@ import { APP_GUARD } from '@nestjs/core';
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: configService.get('NODE_ENV') !== 'production',
         timezone: 'Z',
       }),
     }),

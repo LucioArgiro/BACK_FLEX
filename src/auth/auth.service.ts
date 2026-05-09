@@ -8,6 +8,7 @@ import { CreateUsuarioDto } from 'src/usuario/dto/create-usuario.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { CaptchaService } from './captcha.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -19,7 +20,7 @@ export class AuthService {
     @InjectQueue('email-queue') private readonly emailQueue: Queue,
   ) { }
 
- async registrar(dto: CreateUsuarioDto) {
+  async registrar(dto: CreateUsuarioDto) {
     await this.captchaService.validarToken(dto.captchaToken);
     const { captchaToken, ...datosUsuario } = dto;
     const usuarioExiste = await this.usuarioRepository.findOne({ where: { correo: datosUsuario.correo } });
@@ -48,7 +49,9 @@ export class AuthService {
         nombre: nuevoUsuario.nombre,
         codigo: codigoSecreto
       });
-      console.log(`\n 🚀 [MODO DEV] CÓDIGO OTP PARA ${nuevoUsuario.correo}: [ ${codigoSecreto} ] \n`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`\n 🚀 [MODO DEV] CÓDIGO OTP PARA ${nuevoUsuario.correo}: [ ${codigoSecreto} ] \n`);
+      }
     } catch (error) {
       console.error('No se pudo encolar el correo OTP:', error);
     }
@@ -59,17 +62,16 @@ export class AuthService {
       correo: nuevoUsuario.correo
     };
   }
-
   async verificarEmail(correo: string, codigo: string) {
     const usuario = await this.usuarioRepository.findOne({ where: { correo } });
     if (!usuario) throw new BadRequestException('Usuario no encontrado');
-  if (usuario.correoVerificado) throw new BadRequestException('El correo ya está verificado');
+    if (usuario.correoVerificado) throw new BadRequestException('El correo ya está verificado');
+    
     if (!usuario.expiracionOtp || !usuario.codigoOtp) {
       throw new BadRequestException('No hay un código pendiente de verificación para este usuario.');
     }
     if (new Date() > usuario.expiracionOtp) throw new BadRequestException('El código ha expirado. Regístrate nuevamente o solicita otro.');
     if (usuario.codigoOtp !== codigo) throw new BadRequestException('El código es incorrecto.');
-
     usuario.correoVerificado = true;
     usuario.codigoOtp = null;
     usuario.expiracionOtp = null;
@@ -86,8 +88,7 @@ export class AuthService {
 
     return { mensaje: '¡Cuenta verificada exitosamente! Ya puedes iniciar sesión.' };
   }
-
-async login(correo: string, contrasenaPlana: string) {
+  async login(correo: string, contrasenaPlana: string) {
     const usuario = await this.usuarioRepository.findOne({ where: { correo } });
     if (!usuario) throw new UnauthorizedException('Credenciales incorrectas');
     if (!usuario.correoVerificado) {
@@ -95,8 +96,18 @@ async login(correo: string, contrasenaPlana: string) {
     }
     const esValida = await bcrypt.compare(contrasenaPlana, usuario.contrasena);
     if (!esValida) throw new UnauthorizedException('Credenciales incorrectas');
-    const payload = { sub: usuario.id, correo: usuario.correo, rol: usuario.rol };
+    const idSesion = crypto.randomBytes(16).toString('hex');
+    usuario.idSesionActual = idSesion;
+    await this.usuarioRepository.save(usuario);
+    const payload = { 
+      sub: usuario.id, 
+      correo: usuario.correo, 
+      rol: usuario.rol,
+      sid: idSesion
+    };
+    
     const token = await this.jwtService.signAsync(payload);
+    
     return {
       token,
       usuario: {
@@ -113,7 +124,7 @@ async login(correo: string, contrasenaPlana: string) {
   async solicitarRecuperacion(correo: string) {
     const usuario = await this.usuarioRepository.findOne({ where: { correo } });
     if (!usuario) return { mensaje: 'Revisa tu correo electrónico. Enviamos un enlace de recuperación.' };
-    const token = crypto.randomUUID();
+    const token = crypto.randomBytes(32).toString('hex');
     const expiracion = new Date();
     expiracion.setHours(expiracion.getHours() + 1); 
 
@@ -127,14 +138,15 @@ async login(correo: string, contrasenaPlana: string) {
         nombre: usuario.nombre,
         token: token
       });
-      console.log(`\n 🚀 [MODO DEV] LINK DE RECUPERACIÓN PARA ${usuario.correo}: http://localhost:5173/reset-password?token=${token} \n`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`\n 🚀 [MODO DEV] LINK DE RECUPERACIÓN PARA ${usuario.correo}: http://localhost:5173/reset-password?token=${token} \n`);
+      }
     } catch (error) {
       console.error('No se pudo encolar el correo de recuperación:', error);
     }
 
     return { mensaje: 'Revisa tu correo electrónico. Enviamos un enlace de recuperación.' };
   }
-
   async cambiarContrasena(token: string, nuevaContrasena: string) {
     const usuario = await this.usuarioRepository.findOne({ where: { tokenRecuperacion: token } });
     if (!usuario) {
@@ -148,8 +160,10 @@ async login(correo: string, contrasenaPlana: string) {
     }
     const salt = await bcrypt.genSalt(10);
     usuario.contrasena = await bcrypt.hash(nuevaContrasena, salt);
+    usuario.idSesionActual = null; 
     usuario.tokenRecuperacion = null;
     usuario.expiracionRecuperacion = null;
+    
     await this.usuarioRepository.save(usuario);
 
     return { mensaje: 'Contraseña actualizada exitosamente! Ya puedes iniciar sesión.' };

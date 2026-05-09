@@ -30,8 +30,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const usuario = await this.usuarioRepository.findOne({ 
       where: { id: payload.sub } 
     });
+    
     if (!usuario) {
       throw new UnauthorizedException('El usuario ya no existe en el sistema.');
+    }
+    if (usuario.idSesionActual !== payload.sid) {
+      throw new UnauthorizedException('Tu sesión ha caducado porque se inició sesión en otro dispositivo.');
     }
     const { contrasena, ...usuarioLimpio } = usuario;
     return usuarioLimpio; 

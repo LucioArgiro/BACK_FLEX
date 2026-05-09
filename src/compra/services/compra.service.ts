@@ -15,7 +15,6 @@ import * as crypto from 'crypto';
 @Injectable()
 export class CompraService {
   constructor(
-    
     @InjectRepository(Compra)
     private readonly compraRepository: Repository<Compra>,
     @InjectRepository(Usuario)
@@ -25,11 +24,8 @@ export class CompraService {
     private readonly mercadoPagoService: MercadoPagoService,
     private readonly paypalService: PaypalService,
     @InjectQueue('email-queue') private readonly emailQueue: Queue,
-    
   ) { }
-
-  
- async iniciarProcesoCompra(idUsuario: string, dto: Omit<CrearCompraDto, 'captchaToken'>) {
+  async iniciarProcesoCompra(idUsuario: string, dto: Omit<CrearCompraDto, 'captchaToken'>) {
     const usuario = await this.usuarioRepository.findOne({ where: { id: idUsuario } });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
     const categorias = await this.categoriaRepository.find({
@@ -46,8 +42,8 @@ export class CompraService {
     if (yaCompradas.length > 0) {
       throw new BadRequestException('Ya posees una suscripción activa para una o más clases de este carrito.');
     }
-
-    const grupoPagoId = crypto.randomUUID();
+    const grupoPagoId = crypto.randomBytes(16).toString('hex');
+    
     const plataformaSeleccionada = dto.plataforma;
     const esMercadoPago = plataformaSeleccionada === PlataformaPago.MERCADOPAGO;
     let nuevasCompras: Compra[] = [];
@@ -60,7 +56,6 @@ export class CompraService {
           estado: EstadoPago.PENDIENTE,
         });
       }
-      
       compra.plataforma = plataformaSeleccionada;
       compra.montoCobrado = esMercadoPago ? categoria.precioArs : categoria.precioUsd;
       compra.moneda = esMercadoPago ? 'ARS' : 'USD';
@@ -70,21 +65,17 @@ export class CompraService {
     nuevasCompras = await this.compraRepository.save(nuevasCompras);
     const pasarela = esMercadoPago ? this.mercadoPagoService : this.paypalService;
     const resultadoPago = await pasarela.crearIntencionPago(grupoPagoId, usuario, categorias);
-    
     nuevasCompras.forEach(compra => {
       compra.idPagoExterno = resultadoPago.idPagoExterno;
       compra.urlPago = resultadoPago.urlPago || '';
     });
-
     await this.compraRepository.save(nuevasCompras);
-    
     return {
       url: resultadoPago.urlPago,
       plataforma: plataformaSeleccionada,
       idPagoExterno: resultadoPago.idPagoExterno, 
     };
   }
-
   async procesarWebhookMercadoPago(headers: any, body: any) {
     const accion = body?.action || body?.type || body?.topic;
     const dataId = body?.data?.id || body?.id;
@@ -110,7 +101,6 @@ export class CompraService {
         requiereActualizacion = true;
       }
     });
-
     if (requiereActualizacion) {
       await this.compraRepository.save(comprasDelCarrito);
       console.log(`¡ÉXITO! Orden ${idGrupoLocal} actualizada a: ${pagoReal.status?.toUpperCase()}`);
@@ -123,25 +113,20 @@ export class CompraService {
       }
     }
   }
-
   async procesarWebhookPayPal(body: any) {
     const tipoEvento = body?.event_type;
     const resource = body?.resource;
     let idGrupoLocal = '';
-    
     if (resource?.purchase_units && resource.purchase_units.length > 0) {
       idGrupoLocal = resource.purchase_units[0].reference_id;
     } else if (resource?.custom_id) {
       idGrupoLocal = resource.custom_id;
     }
-    
     if (!idGrupoLocal) return;
-    
     const comprasDelCarrito = await this.compraRepository.find({
       where: { grupoPagoId: idGrupoLocal },
       relations: ['usuario', 'categoria']
     });
-    
     if (comprasDelCarrito.length === 0) return;
     let requiereActualizacion = false;
     if (tipoEvento === 'PAYMENT.CAPTURE.REFUNDED' || tipoEvento === 'PAYMENT.CAPTURE.REVERSED') {
@@ -176,7 +161,6 @@ export class CompraService {
       }
   }
 }
-
   async obtenerMisClasesCompradas(idUsuario: string) {
     const comprasAprobadas = await this.compraRepository.find({
       where: { idUsuario, estado: EstadoPago.APROBADO },
@@ -195,7 +179,6 @@ export class CompraService {
 
     return clasesUnicas;
   }
-
  async obtenerDetalleClaseComprada(idUsuario: string, idCategoria: string) {
     const compra = await this.compraRepository.findOne({
       where: { idUsuario, idCategoria, estado: EstadoPago.APROBADO },
@@ -212,7 +195,6 @@ export class CompraService {
         const minutos = Math.floor((video.duracion || 0) / 60);
         const segundos = (video.duracion || 0) % 60;
         const tiempoFormateado = `${minutos}:${segundos.toString().padStart(2, '0')}`;
-
         return {
           id: video.id,
           titulo: video.titulo,
@@ -222,15 +204,12 @@ export class CompraService {
           duracionFormateada: tiempoFormateado,  
           imagenUrl: video.imagenUrl,
           estado: video.estado,
- 
         };
       })
     };
 
     return categoriaLimpia;
   }
-
-
   @Cron(CronExpression.EVERY_5_MINUTES)
   async limpiarComprasPendientes() {
     try {

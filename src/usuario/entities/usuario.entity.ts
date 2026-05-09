@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Compra } from '../../compra/entities/compra.entity';
-import { Comprobante } from '../../comprobante/entities/comprobante.entity'; 
- 
+import { Comprobante } from '../../comprobante/entities/comprobante.entity';
+
 export enum RolUsuario {
   ADMIN = 'ADMIN',
   CLIENTE = 'CLIENTE',
@@ -55,11 +55,14 @@ export class Usuario {
   @Column({ default: false })
   correoVerificado!: boolean;
 
-@Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   codigoOtp!: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
   expiracionOtp!: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  idSesionActual!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
   tokenRecuperacion!: string | null;

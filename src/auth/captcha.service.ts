@@ -8,7 +8,7 @@ export class CaptchaService {
     const secretKey = this.configService.get<string>('RECAPTCHA_SECRET_KEY');
 
     if (!secretKey) {
-      console.warn('⚠️ No se encontró RECAPTCHA_SECRET_KEY. Saltando validación en desarrollo.');
+      console.warn('No se encontró RECAPTCHA_SECRET_KEY. Saltando validación en desarrollo.');
       return true; 
     }
 

@@ -17,7 +17,7 @@ export class CompraController {
     private readonly captchaService: CaptchaService,
   ) { }
 
-@UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Post('iniciar')
   @Throttle({ default: { limit: 5, ttl: 60000 } })  
   async iniciarCompra(@Req() req, @Body() crearCompraDto: CrearCompraDto) {
@@ -29,18 +29,15 @@ export class CompraController {
 
   @Post('webhook/mercadopago')
   async recibirWebhookMP(@Req() req: Request, @Res() res: Response) {
-    console.log('🔔 ¡DING DONG! LLEGÓ EL WEBHOOK DE MP:', req.query);
-    const entorno = process.env.NODE_ENV || 'development';
-    if (entorno === 'production') {
-      const firmaValida = this.mercadoPagoService.validarFirma(req.headers, req.body);
-      if (!firmaValida) {
-        console.error('🚨 INTENTO DE HACKEO: Firma de Webhook inválida.');
-        return res.status(403).send('Firma de seguridad inválida');
-      }
-    } else {
-      console.warn('⚠️ Webhook recibido en modo desarrollo. Saltando validación de firma...');
+    console.log('LLEGÓ WEBHOOK DE MP:', req.query);
+    const firmaValida = this.mercadoPagoService.validarFirma(req.headers, req.body);
+    if (!firmaValida) {
+      console.error('INTENTO DE HACKEO O FIRMA INVÁLIDA MP.');
+      return res.status(403).send('Firma de seguridad inválida');
     }
+
     res.status(200).send('OK');
+    
     try {
       await this.compraService.procesarWebhookMercadoPago(req.headers, req.body);
     } catch (error) {
@@ -63,18 +60,15 @@ export class CompraController {
 
   @Post('webhook/paypal')
   async recibirWebhookPayPal(@Req() req: Request, @Res() res: Response) {
-    console.log('🔔 ¡DING DONG! LLEGÓ EL WEBHOOK DE PAYPAL:', req.body?.event_type);
-    const entorno = process.env.NODE_ENV || 'development';
-    if (entorno === 'production') {
-      const firmaValida = await this.PaypalService.validarFirmaWebhook(req.headers, req.body);
-      if (!firmaValida) {
-        console.error('🚨 INTENTO DE HACKEO: Firma de Webhook de PayPal inválida.');
-        return res.status(403).send('Firma de seguridad inválida');
-      }
-    } else {
-      console.warn('⚠️ Webhook de PayPal en modo desarrollo. Saltando validación de firma...');
+    console.log('LLEGÓ WEBHOOK DE PAYPAL:', req.body?.event_type);
+    const firmaValida = await this.PaypalService.validarFirmaWebhook(req.headers, req.body);
+    if (!firmaValida) {
+      console.error('INTENTO DE HACKEO O FIRMA INVÁLIDA PAYPAL.');
+      return res.status(403).send('Firma de seguridad inválida');
     }
+
     res.status(200).send('OK');
+    
     try {
       await this.compraService.procesarWebhookPayPal(req.body);
     } catch (error) {
