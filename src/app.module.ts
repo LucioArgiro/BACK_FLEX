@@ -13,11 +13,23 @@ import { CompraModule } from './compra/compra.module';
 import { AuthModule } from './auth/auth.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { BullModule } from '@nestjs/bullmq';
+import { ScheduleModule } from '@nestjs/schedule';
+import { AdminModule } from './admin/admin.module';
+import { validarEntorno } from 'env.validation';
+import { ContactoModule } from './contacto/contacto.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validarEntorno, }),
 
+   ThrottlerModule.forRoot([{
+      ttl: 60000, 
+      limit: 100,  
+    }]),
+
+    ScheduleModule.forRoot(),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -37,7 +49,7 @@ import { BullModule } from '@nestjs/bullmq';
         return {
           transport: {
             host: config.get('EMAIL_HOST'),
-            port: 2525, 
+            port: 2525,
             secure: false,
             auth: {
               user: config.get<string>('EMAIL_USER'),
@@ -68,7 +80,8 @@ import { BullModule } from '@nestjs/bullmq';
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: configService.get('NODE_ENV') !== 'production',
+        timezone: 'Z',
       }),
     }),
 
@@ -78,8 +91,10 @@ import { BullModule } from '@nestjs/bullmq';
     CompraModule,
     AuthModule,
     CloudinaryModule,
+    AdminModule,
+    ContactoModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, {provide: APP_GUARD, useClass: ThrottlerGuard,}],
 })
 export class AppModule { }

@@ -1,35 +1,33 @@
-import { IsString, IsEmail, IsNotEmpty, IsOptional, MinLength, IsDateString, Matches } from 'class-validator';
+import { IsString, IsEmail, IsNotEmpty, IsOptional, IsPhoneNumber, IsDateString, Matches, MaxLength } from 'class-validator';
 
 
 export class CreateUsuarioDto {
-  // --- CAMPOS OBLIGATORIOS ---
 
   @IsEmail({}, { message: 'El correo debe tener un formato válido' })
   @IsNotEmpty({ message: 'El correo es obligatorio' })
-  correo: string;
+  correo!: string;
 
   @IsString()
   @IsNotEmpty({ message: 'La contraseña es obligatoria' })
+  @MaxLength(50, { message: 'La contraseña no puede exceder los 50 caracteres' })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/, {
     message: 'La contraseña debe tener al menos 6 caracteres, una mayúscula, una minúscula, un número y un carácter especial',
   })
-  contrasena: string;
+  contrasena!: string;
 
   @IsString()
   @IsNotEmpty({ message: 'El nombre es obligatorio' })
-  nombre: string;
+  nombre!: string;
 
   @IsString()
   @IsNotEmpty({ message: 'El apellido es obligatorio' })
-  apellido: string;
+  apellido!: string;
 
-  // --- CAMPOS OPCIONALES ---
+  @IsNotEmpty({ message: 'El teléfono es obligatorio' })
+  @IsPhoneNumber(undefined, { message: 'El formato del número telefónico es inválido internacionalmente' })
+  telefono!: string;
 
-  @IsString()
-  @IsOptional()
-  telefono?: string;
-
-  // Usamos IsDateString porque desde React enviaremos la fecha como texto (ej: "1995-08-25")
+ 
   @IsDateString({}, { message: 'La fecha debe tener un formato válido (YYYY-MM-DD)' })
   @IsOptional()
   fechaNacimiento?: string;
@@ -54,4 +52,7 @@ export class CreateUsuarioDto {
   @IsOptional()
   codigoPostal?: string;
 
+  @IsString()
+  @IsNotEmpty({ message: 'El token de captcha es obligatorio' })
+  captchaToken!: string;
 }

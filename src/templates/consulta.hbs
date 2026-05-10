@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Consulta - Flex Studio</title>
+    <style>
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        body { margin: 0; padding: 0; width: 100% !important; background-color: #0a0a0a; }
+    </style>
+</head>
+<body style="background-color: #0a0a0a; margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0a0a0a;">
+    <tr>
+        <td align="center" style="padding: 40px 20px;">
+            <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #1a1a1a; border-radius: 20px; overflow: hidden; border: 1px solid #333333; margin: auto;">
+                <tr><td height="5" style="background-color: #d7f250;"></td></tr>
+                <tr>
+                    <td align="center" style="padding: 35px 40px 20px 40px;">
+                        <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: -0.5px;">
+                            NUEVA <span style="color: #d7f250;">CONSULTA</span>
+                        </h1>
+                        <p style="color: #888888; font-size: 14px; margin: 10px 0 0 0;">Has recibido un mensaje desde la web.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 0 40px 30px 40px;">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #111111; border-radius: 16px; margin-bottom: 20px; border: 1px solid #222222;">
+                            <tr>
+                                <td style="padding: 25px;">
+                                    <p style="margin: 0 0 12px 0; color: #555555; font-size: 11px; text-transform: uppercase; font-weight: bold; letter-spacing: 1.5px;">Datos del Contacto</p>
+                                    
+                                    <p style="margin: 0 0 8px 0; color: #ffffff; font-size: 16px;">
+                                        <strong style="color: #d7f250; margin-right: 5px;">Nombre:</strong> {{nombre}}
+                                    </p>
+                                    <p style="margin: 0; color: #ffffff; font-size: 16px;">
+                                        <strong style="color: #d7f250; margin-right: 5px;">Correo:</strong> 
+                                        <a href="mailto:{{correo}}" style="color: #ffffff; text-decoration: none; border-bottom: 1px solid #444;">{{correo}}</a>
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #111111; border-radius: 12px; border-left: 4px solid #d7f250; border-top: 1px solid #222; border-right: 1px solid #222; border-bottom: 1px solid #222;">
+                            <tr>
+                                <td style="padding: 25px;">
+                                    <p style="margin: 0 0 15px 0; color: #555555; font-size: 11px; text-transform: uppercase; font-weight: bold; letter-spacing: 1.5px;">Mensaje</p>
+                                    <p style="margin: 0; color: #e0e0e0; font-size: 15px; line-height: 1.7; white-space: pre-wrap;">{{mensaje}}</p>
+                                </td>
+                            </tr>
+                        </table>
+
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center" style="padding: 0 40px 35px 40px;">
+                        <p style="color: #666666; font-size: 13px; font-style: italic; margin: 0;">
+                            * Tip: Puedes responder directamente a este correo para hablar con {{nombre}}.
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

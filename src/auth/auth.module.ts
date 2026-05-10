@@ -5,14 +5,17 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Usuario } from '../usuario/entities/usuario.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
-import { ConfigModule, ConfigService } from '@nestjs/config'; // 👈 Imports
+import { ConfigModule, ConfigService } from '@nestjs/config'; 
 import { BullModule } from '@nestjs/bullmq';
 import { MailProcessor } from './mail.processor';
+import { CaptchaService } from './captcha.service';
+import { ComprobanteModule } from '../comprobante/ComprobanteModule'; 
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Usuario]),
-    BullModule.registerQueue({name: 'email-queue',}),
+    BullModule.registerQueue({ name: 'email-queue' }),
+    ComprobanteModule, 
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -23,6 +26,7 @@ import { MailProcessor } from './mail.processor';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, MailProcessor],
+  providers: [AuthService, JwtStrategy, MailProcessor, CaptchaService],
+  exports: [CaptchaService] 
 })
-export class AuthModule { }
+export class AuthModule {}

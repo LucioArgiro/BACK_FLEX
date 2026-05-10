@@ -1,31 +1,62 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Usuario } from '../../usuario/entities/usuario.entity';
 import { Categoria } from '../../categoria/entities/categoria.entity';
 
+export enum EstadoPago {
+  PENDIENTE = 'PENDIENTE',
+  APROBADO = 'APROBADO',
+  RECHAZADO = 'RECHAZADO',
+}
+
+export enum PlataformaPago {
+  MERCADOPAGO = 'MERCADOPAGO',
+  PAYPAL = 'PAYPAL',
+}
+
 @Entity('compras')
-@Unique(['idUsuario', 'idCategoria']) // Evita que un usuario compre la misma categoría dos veces
+@Index(['estado', 'fechaCompra'])         
+@Index(['idUsuario', 'estado'])        
+@Index(['grupoPagoId'])                   
 export class Compra {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  idUsuario: string;
+  idUsuario!: string;
 
   @Column()
-  idCategoria: string;
+  idCategoria!: string;
+  
+  @Column({ type: 'enum', enum: EstadoPago, default: EstadoPago.PENDIENTE })
+  estado!: EstadoPago;
+
+  @Column({ type: 'enum', enum: PlataformaPago, nullable: true })
+  plataforma!: PlataformaPago;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  montoCobrado!: number;
+
+  @Column({ type: 'varchar', length: 3, nullable: true })
+  moneda!: string; 
 
   @Column({ nullable: true })
-  idPago: string;
+  idPagoExterno!: string;  
+
+  @Column({ nullable: true })
+  urlPago!: string; 
+
+  @Column({ nullable: true })
+  grupoPagoId!: string; 
 
   @CreateDateColumn()
-  fechaCompra: Date;
+  fechaCompra!: Date;
 
-  // Relaciones
+ 
   @ManyToOne(() => Usuario, (usuario) => usuario.compras, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'idUsuario' })
-  usuario: Usuario;
+  usuario!: Usuario;
 
   @ManyToOne(() => Categoria, (categoria) => categoria.compras, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'idCategoria' })
-  categoria: Categoria;
+  categoria!: Categoria;
 }
