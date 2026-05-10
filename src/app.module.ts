@@ -68,7 +68,7 @@ import { APP_GUARD } from '@nestjs/core';
       },
     }),
 
-    TypeOrmModule.forRootAsync({
+   TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -78,8 +78,11 @@ import { APP_GUARD } from '@nestjs/core';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        entities: [__dirname + '/**/*.entity.{ts,js}'],
+        migrations: [__dirname + '/migrations/*.{ts,js}'],
+        
         autoLoadEntities: true,
+        migrationsRun: true,  
         synchronize: configService.get('NODE_ENV') !== 'production',
         timezone: 'Z',
       }),
