@@ -255,7 +255,6 @@ export class VideoService {
     if (!video || !video.playbackId) {
       throw new NotFoundException('El video no está disponible para reproducción.');
     }
-
     if (!video.idCategoria) {
       this.logger.error(`CRÍTICO: El video ${idVideo} no tiene una categoría asignada en la DB.`);
       throw new InternalServerErrorException('Error de integridad de datos en el video.');
@@ -267,25 +266,24 @@ export class VideoService {
         estado: EstadoPago.APROBADO,
       },
     });
-
     if (!compra) {
-      this.logger.warn(`🚨 Intento de acceso denegado: Usuario [${idUsuario}] intentó ver Video [${idVideo}] sin compra válida.`);
+      this.logger.warn(`Intento de acceso denegado: Usuario [${idUsuario}] intentó ver Video [${idVideo}] sin compra válida.`);
       throw new ForbiddenException('No tienes permisos para ver este video o tu suscripción ha expirado.');
     }
     const keyId = process.env.MUX_SIGNING_KEY_ID;
-    const keyPrivate = process.env.MUX_SIGNING_KEY_PRIVATE;
-
-    if (!keyId || !keyPrivate) {
+    const keyPrivateRaw = process.env.MUX_SIGNING_KEY_PRIVATE;
+    if (!keyId || !keyPrivateRaw) {
       this.logger.error('CRÍTICO: Faltan las llaves de firmado de Mux (MUX_SIGNING_KEY_ID o MUX_SIGNING_KEY_PRIVATE).');
       throw new InternalServerErrorException('Error de configuración en el servidor de video.');
     }
+    const keyPrivateDecodificada = Buffer.from(keyPrivateRaw, 'base64').toString('utf-8');
 
     try {
       const token = await this.muxClient.jwt.signPlaybackId(
         video.playbackId,
         {
           keyId: keyId,
-          keySecret: keyPrivate,
+          keySecret: keyPrivateDecodificada,
           expiration: '3h',  
         }
       );
