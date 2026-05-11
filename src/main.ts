@@ -20,7 +20,7 @@ async function bootstrap() {
   
   app.use(cookieParser());
   const origenesPermitidos = process.env.NODE_ENV === 'production'
-    ? [process.env.FRONTEND_URL || 'https://flexstudio-two.vercel.app']
+    ? [process.env.FRONTEND_URL || 'https://flexstudio-two.vercel.app.ar' || 'https://flexstudio-two.vercel.app']
     : ['http://localhost:5173'];   
 
   app.enableCors({

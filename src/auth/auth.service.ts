@@ -139,9 +139,6 @@ export class AuthService {
         nombre: usuario.nombre,
         token: token
       });
-      if (process.env.NODE_ENV !== 'production') {
-        logger.debug(`🚀 [MODO DEV] LINK DE RECUPERACIÓN PARA ${usuario.correo}: http://localhost:5173/reset-password?token=${token}`);
-      }
     } catch (error) {
       console.error('No se pudo encolar el correo de recuperación:', error);
     }
