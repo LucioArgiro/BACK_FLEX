@@ -50,9 +50,6 @@ export class AuthService {
         nombre: nuevoUsuario.nombre,
         codigo: codigoSecreto
       });
-      if (process.env.NODE_ENV !== 'production') {
-        logger.debug(`🚀 [MODO DEV] CÓDIGO OTP PARA ${nuevoUsuario.correo}: [ ${codigoSecreto} ]`);
-      }
     } catch (error) {
       console.error('No se pudo encolar el correo OTP:', error);
     }
