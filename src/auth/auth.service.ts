@@ -3,12 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Usuario } from '../usuario/entities/usuario.entity';
 import * as bcrypt from 'bcrypt';
-import { JwtService } from '@nestjs/jwt';
+import { logger } from '../logger';
 import { CreateUsuarioDto } from 'src/usuario/dto/create-usuario.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { CaptchaService } from './captcha.service';
 import * as crypto from 'crypto';
+import { JwtService } from '@nestjs/jwt/dist/jwt.service';
 
 @Injectable()
 export class AuthService {
@@ -50,7 +51,7 @@ export class AuthService {
         codigo: codigoSecreto
       });
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`\n 🚀 [MODO DEV] CÓDIGO OTP PARA ${nuevoUsuario.correo}: [ ${codigoSecreto} ] \n`);
+        logger.debug(`🚀 [MODO DEV] CÓDIGO OTP PARA ${nuevoUsuario.correo}: [ ${codigoSecreto} ]`);
       }
     } catch (error) {
       console.error('No se pudo encolar el correo OTP:', error);
@@ -139,7 +140,7 @@ export class AuthService {
         token: token
       });
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`\n 🚀 [MODO DEV] LINK DE RECUPERACIÓN PARA ${usuario.correo}: http://localhost:5173/reset-password?token=${token} \n`);
+        logger.debug(`🚀 [MODO DEV] LINK DE RECUPERACIÓN PARA ${usuario.correo}: http://localhost:5173/reset-password?token=${token}`);
       }
     } catch (error) {
       console.error('No se pudo encolar el correo de recuperación:', error);

@@ -35,7 +35,7 @@ export class CategoriaController {
   @UseInterceptors(FileFieldsInterceptor([
     { name: 'imagenHero', maxCount: 1 },
     { name: 'imagenTarjeta', maxCount: 1 },
-  ], { fileFilter }))
+  ], { fileFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   crear(
     @Body() body: CreateCategoriaDto,
     @UploadedFiles() files: ArchivosCategoria
@@ -64,7 +64,7 @@ export class CategoriaController {
     { name: 'imagenHero', maxCount: 1 },
     { name: 'imagenTarjeta', maxCount: 1 },
     { name: 'videoMuestra', maxCount: 1 },
-  ], { fileFilter }))
+  ], { fileFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   actualizar(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateCategoriaDto,
