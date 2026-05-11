@@ -8,6 +8,7 @@ import { PaypalService } from './services/paypal.service';
 import { CaptchaService } from '../auth/captcha.service';
 import { Throttle } from '@nestjs/throttler';
 
+@Throttle({ default: { limit: 20, ttl: 60000 } })
 @Controller('compras')
 export class CompraController {
   constructor(
@@ -27,6 +28,7 @@ export class CompraController {
     return this.compraService.iniciarProcesoCompra(idUsuario, datosCompraLimpios);
   }
 
+  @Throttle({default:{ limit: 5, ttl: 60000 }})
   @Post('webhook/mercadopago')
   async recibirWebhookMP(@Req() req: Request, @Res() res: Response) {
     console.log('LLEGÓ WEBHOOK DE MP:', req.query);
@@ -58,6 +60,7 @@ export class CompraController {
     return await this.compraService.obtenerDetalleClaseComprada(req.user.id, idCategoria);
   }
 
+   @Throttle({default:{ limit: 5, ttl: 60000 }})
   @Post('webhook/paypal')
   async recibirWebhookPayPal(@Req() req: Request, @Res() res: Response) {
     console.log('LLEGÓ WEBHOOK DE PAYPAL:', req.body?.event_type);

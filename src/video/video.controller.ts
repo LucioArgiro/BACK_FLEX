@@ -2,7 +2,8 @@
   import { FileInterceptor } from '@nestjs/platform-express';
   import { VideoService } from './video.service';
   import { AdminGuard } from 'src/auth/admin.guard';
-  import { JwtAuthGuard } from '../auth/jwt-auth.guard'; 
+  import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Throttle } from '@nestjs/throttler';
   import { CrearVideoDto } from './dto/crear-video.dto';
   import { UpdateVideoDto } from './dto/update-video.dto';
 
@@ -12,7 +13,7 @@
 
     @Post('solicitar-subida')
     @UseGuards(AdminGuard)
-    @UseInterceptors(FileInterceptor('imagen'))
+    @UseInterceptors(FileInterceptor('imagen', { limits: { fileSize: 5 * 1024 * 1024 } }))
     solicitarSubida(
       @Body() body: CrearVideoDto,
       @UploadedFile() file: Express.Multer.File
@@ -46,7 +47,7 @@
 
     @Patch(':id')
     @UseGuards(AdminGuard)
-    @UseInterceptors(FileInterceptor('imagen'))
+    @UseInterceptors(FileInterceptor('imagen', { limits: { fileSize: 5 * 1024 * 1024 } }))
     actualizar(
       @Param('id', ParseUUIDPipe) id: string,
       @Body() body: UpdateVideoDto,
@@ -62,6 +63,8 @@
     }
 
     @Get('reproducir/:idVideo')
+    @Throttle({default: { limit: 30, ttl: 60000 }})
+    @UseGuards(JwtAuthGuard)
     @UseGuards(JwtAuthGuard) 
     obtenerParaReproduccion(@Param('idVideo', ParseUUIDPipe) idVideo: string, @Req() req: any) {
       const idUsuario = req.user.id;
